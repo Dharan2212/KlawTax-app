@@ -1,0 +1,562 @@
+/* ============================================================
+   KlawTax Design System — Global Styles
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   DESIGN TOKENS — CSS VARIABLES
+   All color values use raw H S L parts so they work with
+   hsl(var(--token)) syntax throughout the codebase.
+   ============================================================ */
+
+:root {
+  /* ── KlawTax brand palette ───────────────────────────────── */
+  --color-primary-900:   222 67% 18%;
+  --color-primary-800:   222 60% 26%;
+  --color-primary-700:   222 73% 33%;
+  --color-primary-600:   221 83% 53%;
+  --color-primary-500:   217 91% 60%;
+  --color-primary-100:   214 95% 93%;
+  --color-primary-50:    214 100% 97%;
+
+  --color-secondary-900: 263 80% 23%;
+  --color-secondary-800: 263 75% 29%;
+  --color-secondary-700: 263 70% 35%;
+  --color-secondary-500: 263 70% 58%;
+  --color-secondary-300: 252 95% 85%;
+  --color-secondary-100: 250 100% 95%;
+
+  --color-accent-600:    28  90% 37%;
+  --color-accent-500:    38  92% 50%;
+  --color-accent-400:    43  96% 56%;
+  --color-accent-300:    48  96% 65%;
+  --color-accent-100:    48  96% 89%;
+
+  --color-success-700:   142 71% 29%;
+  --color-success-500:   142 71% 45%;
+  --color-success-100:   142 76% 93%;
+  --color-warning-500:   24  95% 53%;
+  --color-info-500:      188 95% 43%;
+
+  --color-neutral-900:   222 47% 11%;
+  --color-neutral-700:   215 25% 27%;
+  --color-neutral-500:   215 16% 47%;
+  --color-neutral-300:   213 27% 84%;
+  --color-neutral-100:   210 40% 96%;
+  --color-neutral-50:    210 40% 98%;
+  --color-white:         0   0% 100%;
+
+  /* ── shadcn/ui semantic tokens ───────────────────────────── */
+  --background:           var(--color-white);
+  --foreground:           var(--color-neutral-900);
+  --card:                 var(--color-white);
+  --card-foreground:      var(--color-neutral-900);
+  --popover:              var(--color-white);
+  --popover-foreground:   var(--color-neutral-900);
+  --primary:              var(--color-primary-600);
+  --primary-foreground:   var(--color-white);
+  --secondary:            var(--color-neutral-100);
+  --secondary-foreground: var(--color-neutral-900);
+  --muted:                var(--color-neutral-100);
+  --muted-foreground:     var(--color-neutral-500);
+  --accent:               var(--color-accent-400);
+  --accent-foreground:    var(--color-neutral-900);
+  --destructive:          0 84% 60%;
+  --destructive-foreground: var(--color-white);
+  --border:               var(--color-neutral-300);
+  --input:                var(--color-neutral-300);
+  --ring:                 var(--color-primary-500);
+  --radius:               0.5rem;
+
+  /* ── Sidebar tokens ──────────────────────────────────────── */
+  --sidebar-background:           var(--color-neutral-50);
+  --sidebar-foreground:           var(--color-neutral-700);
+  --sidebar-primary:              var(--color-primary-600);
+  --sidebar-primary-foreground:   var(--color-white);
+  --sidebar-accent:               var(--color-primary-100);
+  --sidebar-accent-foreground:    var(--color-primary-900);
+  --sidebar-border:               var(--color-neutral-300);
+  --sidebar-ring:                 var(--color-primary-500);
+
+  /* ── Gradients ───────────────────────────────────────────── */
+  --gradient-hero:
+    linear-gradient(
+      135deg,
+      hsl(var(--color-primary-900)) 0%,
+      hsl(var(--color-primary-700)) 30%,
+      hsl(var(--color-secondary-900)) 100%
+    );
+  --gradient-cta-banner:
+    linear-gradient(
+      135deg,
+      hsl(var(--color-primary-800)) 0%,
+      hsl(var(--color-secondary-800)) 50%,
+      hsl(var(--color-accent-600)) 100%
+    );
+  --gradient-card-premium:
+    linear-gradient(
+      145deg,
+      hsl(var(--color-white)) 0%,
+      hsl(var(--color-neutral-50)) 80%,
+      hsl(var(--color-primary-50)) 100%
+    );
+  --gradient-accent:
+    linear-gradient(
+      135deg,
+      hsl(var(--color-accent-300)) 0%,
+      hsl(var(--color-accent-500)) 100%
+    );
+  --gradient-success:
+    linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(160 84% 39%) 100%);
+  --gradient-mesh-light:
+    radial-gradient(at 0% 0%,   hsl(var(--color-primary-100) / 0.8) 0%, transparent 60%),
+    radial-gradient(at 100% 0%, hsl(var(--color-secondary-100) / 0.8) 0%, transparent 60%),
+    radial-gradient(at 50% 100%, hsl(var(--color-accent-100) / 0.6) 0%, transparent 60%);
+
+  /* ── Spacing (8pt grid) ──────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-32: 128px;
+  --section-py-sm: 48px;
+  --section-py-md: 80px;
+  --section-py-lg: 128px;
+
+  /* ── Border radius ───────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md:  0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lg:  0 10px 40px rgba(0, 0, 0, 0.12);
+  --shadow-xl:  0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.20);
+  --shadow-accent-glow:  0 0 20px hsl(var(--color-accent-400) / 0.4);
+  --shadow-primary-glow: 0 0 20px hsl(var(--color-primary-500) / 0.3);
+  --shadow-purple-glow:  0 0 20px hsl(var(--color-secondary-500) / 0.3);
+
+  /* ── Easing ──────────────────────────────────────────────── */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+
+  /* ── Mapped aliases (safe bridge — placed last so they
+        reference the resolved HSL tokens above) ─────────────
+     These provide a simple API for non-hsl() contexts
+     (e.g. gradient strings, box-shadow, border values).     */
+  /* Safe mapped aliases — placed last so they resolve against
+     the raw HSL tokens defined above. Use these where a fully
+     resolved color string is needed (e.g. JS, non-hsl context).
+     NOTE: --color-neutral-900 is intentionally NOT aliased here
+     because it already exists as a raw HSL value (222 47% 11%)
+     and aliasing it to hsl(var(--foreground)) would be circular. */
+  --color-primary:      hsl(var(--primary));
+  --color-accent:       hsl(var(--accent));
+  --color-accent-light: hsl(var(--color-accent-500));
+}
+
+/* ── Dark mode overrides ───────────────────────────────────── */
+.dark {
+  --background:           var(--color-neutral-900);
+  --foreground:           var(--color-neutral-50);
+  --card:                 222 47% 15%;
+  --card-foreground:      var(--color-neutral-50);
+  --popover:              var(--color-neutral-900);
+  --popover-foreground:   var(--color-neutral-50);
+  --primary:              var(--color-primary-500);
+  --primary-foreground:   var(--color-white);
+  --secondary:            217 33% 17%;
+  --secondary-foreground: var(--color-neutral-50);
+  --muted:                217 33% 17%;
+  --muted-foreground:     215 20% 65%;
+  --accent:               var(--color-accent-400);
+  --accent-foreground:    var(--color-neutral-900);
+  --destructive:          0 63% 31%;
+  --destructive-foreground: var(--color-neutral-50);
+  --border:               217 33% 17%;
+  --input:                217 33% 25%;
+  --ring:                 213 27% 84%;
+  --gradient-card-premium:
+    linear-gradient(145deg, hsl(217 33% 18%) 0%, hsl(222 47% 12%) 100%);
+  --gradient-mesh-light:
+    radial-gradient(at 0% 0%,   hsl(var(--color-primary-900) / 0.5) 0%, transparent 60%),
+    radial-gradient(at 100% 0%, hsl(var(--color-secondary-900) / 0.5) 0%, transparent 60%),
+    radial-gradient(at 50% 100%, hsl(var(--color-accent-600) / 0.15) 0%, transparent 60%);
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
+
+.container {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 2rem;
+  padding-left: 2rem;
+}
+
+@media (min-width: 480px)  { .container { max-width: 480px;  } }
+@media (min-width: 768px)  { .container { max-width: 768px;  } }
+@media (min-width: 1024px) { .container { max-width: 1024px; } }
+@media (min-width: 1280px) { .container { max-width: 1280px; } }
+@media (min-width: 1400px) { .container { max-width: 1400px; } }
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+.hero-headline {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: hsl(var(--color-neutral-900));
+}
+
+.page-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.25rem, 4.5vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.section-heading {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.card-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.125rem, 1.5vw, 1.5rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.body-lg {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(1.0625rem, 1.2vw, 1.25rem);
+  line-height: 1.65;
+  color: hsl(var(--color-neutral-500));
+}
+
+.body-base {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: hsl(var(--color-neutral-500));
+}
+
+.price-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 2.5vw, 2.5rem);
+}
+
+.form-label {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: hsl(var(--color-neutral-700));
+}
+
+/* ============================================================
+   BUTTON UTILITIES
+   ============================================================ */
+
+.btn-primary {
+  background: linear-gradient(
+    to right,
+    hsl(var(--color-accent-400)),
+    hsl(var(--color-accent-600))
+  );
+  color: hsl(var(--color-neutral-900));
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  box-shadow: var(--shadow-accent-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px hsl(var(--color-accent-400) / 0.45);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  border: 1.5px solid hsl(var(--color-neutral-300));
+  color: hsl(var(--color-neutral-900));
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-weight: 600;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: hsl(var(--color-neutral-100));
+  border-color: hsl(var(--color-primary-600));
+}
+
+.btn-premium {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    to right,
+    hsl(var(--color-accent-400)),
+    hsl(var(--color-accent-600))
+  );
+  color: hsl(var(--color-neutral-900));
+  font-weight: 800;
+  border-radius: var(--radius-xl);
+  transition: all 0.4s var(--ease-spring);
+  box-shadow: var(--shadow-lg), 0 4px 20px hsl(var(--color-accent-500) / 0.4);
+  letter-spacing: -0.01em;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-premium:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-xl), 0 8px 30px hsl(var(--color-accent-400) / 0.6);
+}
+
+.btn-premium:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* ============================================================
+   CARD UTILITIES
+   ============================================================ */
+
+.card {
+  background: hsl(var(--color-white));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.premium-card {
+  background: var(--gradient-card-premium);
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl), 0 0 0 1px hsl(var(--color-white) / 0.1) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--color-white) / 0.3),
+    transparent
+  );
+  opacity: 0.5;
+}
+
+/* ============================================================
+   EFFECT UTILITIES
+   ============================================================ */
+
+.glass {
+  background: hsl(var(--color-white) / 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--color-white) / 0.4);
+}
+
+.dark .glass {
+  background: hsl(var(--color-neutral-900) / 0.6);
+  border: 1px solid hsl(var(--color-white) / 0.05);
+}
+
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--color-primary-600)),
+    hsl(var(--color-secondary-500))
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .gradient-text {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--color-primary-400)),
+    hsl(var(--color-secondary-400))
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hover-lift {
+  transition:
+    transform    0.4s var(--ease-spring),
+    box-shadow   0.4s var(--ease-spring),
+    border-color 0.4s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-2xl);
+  border-color: hsl(var(--color-primary-500) / 0.3);
+}
+
+/* ============================================================
+   FORM UTILITIES
+   ============================================================ */
+
+.input-premium {
+  border-radius: var(--radius-lg);
+  border: 1px solid hsl(var(--border) / 0.6);
+  background: hsl(var(--background));
+  transition: all 0.3s ease;
+}
+
+.input-premium:focus-visible {
+  outline: none;
+  border-color: hsl(var(--color-primary-500));
+  box-shadow: 0 0 0 3px hsl(var(--color-primary-500) / 0.2);
+}
+
+/* ============================================================
+   BADGE UTILITIES
+   ============================================================ */
+
+.badge-premium {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: hsl(var(--color-primary-50));
+  color: hsl(var(--color-primary-700));
+  border: 1px solid hsl(var(--color-primary-100));
+}
+
+.dark .badge-premium {
+  background: hsl(var(--color-primary-900) / 0.3);
+  color: hsl(var(--color-primary-300));
+  border-color: hsl(var(--color-primary-800) / 0.5);
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes levitate {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 hsl(var(--color-accent-400) / 0.4); }
+  50%       { box-shadow: 0 0 20px 4px hsl(var(--color-accent-400) / 0.2); }
+}
+
+/* ============================================================
+   ANIMATION UTILITIES
+   ============================================================ */
+
+.animate-slide-up   { animation: slideUpFade 0.6s var(--ease-out) forwards; }
+.animate-scale-in   { animation: scaleIn 0.4s var(--ease-spring) forwards; }
+.animate-levitate   { animation: levitate 3s ease-in-out infinite; }
+.animate-fade-in    { animation: fadeIn 0.5s var(--ease-out) forwards; }
+.animate-pulse-glow { animation: pulseGlow 2s infinite; }
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--color-neutral-100)) 25%,
+    hsl(var(--color-neutral-50)),
+    hsl(var(--color-neutral-100)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

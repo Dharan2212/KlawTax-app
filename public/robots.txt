@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /crm/
+Disallow: /checkout
+Disallow: /submit-documents
+Disallow: /dashboard
+
+User-agent: Googlebot
+Allow: /
+Disallow: /crm/
+Disallow: /checkout
+Disallow: /submit-documents
+Disallow: /dashboard
+
+User-agent: Bingbot
+Allow: /
+Disallow: /crm/
+Disallow: /checkout
+Disallow: /submit-documents
+Disallow: /dashboard
+
+Sitemap: https://klawtax.online/sitemap.xml
