@@ -27,6 +27,16 @@ export default function PricingPage() {
         description="Clear pricing for NGO registration, business compliance, audits, and digital service packages. No hidden fees — all government fees included."
         keywords="pricing, transparent pricing, NGO package, business package, compliance package, legal services India"
         canonical="/pricing"
+        jsonLd={JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "Are government fees included in KlawTax pricing?", acceptedAnswer: { "@type": "Answer", text: "Yes — all KlawTax prices are all-inclusive. Government registration and filing fees are covered unless explicitly noted." } },
+            { "@type": "Question", name: "Can I pay in instalments?", acceptedAnswer: { "@type": "Answer", text: "Yes. Pay 50% now to get started, and the remaining balance is due before your final certificate is delivered." } },
+            { "@type": "Question", name: "What payment methods does KlawTax accept?", acceptedAnswer: { "@type": "Answer", text: "UPI, net banking, credit/debit cards, and wallets via Razorpay — India's most trusted payment gateway." } },
+            { "@type": "Question", name: "How much does NGO registration cost?", acceptedAnswer: { "@type": "Answer", text: "Section 8 NGO registration starts from ₹8,000. The complete NGO package including 12A, 80G, DARPAN, and E-Anudan is ₹13,500 all-inclusive." } },
+          ],
+        })}
       />
       <Navbar />
 

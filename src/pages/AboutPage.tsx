@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import SEO from "@/components/shared/SEO";
 
 const VALUES = [
   {
@@ -41,6 +42,12 @@ const STATS = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen" style={{ background: "hsl(var(--color-neutral-50))" }}>
+      <SEO
+        title="About KlawTax | Trusted Legal & NGO Services Platform"
+        description="Learn about KlawTax — India's trusted platform for NGO registration, compliance, audit, and legal services, backed by expert CS & CA professionals."
+        keywords="about KlawTax, legal services India, NGO support, compliance platform, CA CS experts"
+        canonical="/about"
+      />
       <Navbar />
 
       {/* ── Hero ── */}

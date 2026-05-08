@@ -3,6 +3,7 @@ import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import StickyMobileBar from "@/components/shared/StickyMobileBar";
+import SEO from "@/components/shared/SEO";
 import { useLeadStore } from "@/store/useLeadStore";
 import { services } from "@/lib/services";
 import {
@@ -64,6 +65,12 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="Contact KlawTax | Talk to Our Legal & Compliance Team"
+        description="Contact KlawTax for expert support on NGO registration, business compliance, audits, and legal services. WhatsApp, call, or email — we respond within 2 hours."
+        keywords="contact KlawTax, WhatsApp support, legal help, compliance support, NGO registration help"
+        canonical="/contact"
+      />
       <Navbar />
       <main role="main" className="flex-1">
 

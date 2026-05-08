@@ -18,9 +18,23 @@ export default function Index() {
     <motion.div variants={pageTransition} initial="hidden" animate="visible" exit="exit" className="min-h-screen">
       <SEO
         title="KlawTax.online | Premium Legal & NGO Services in India"
-        description="Trusted legal, NGO, compliance, registration, audit, and digital services with transparent pricing and expert support."
-        keywords="NGO registration, 12A, 80G, GST, Section 8 company, compliance, legal services"
+        description="Trusted legal, NGO, compliance, registration, audit, and digital services with transparent pricing and expert support. Starting ₹999."
+        keywords="NGO registration, 12A, 80G, GST, Section 8 company, compliance, legal services India"
         canonical="/"
+        jsonLd={JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": "https://klawtax.online/#webpage",
+          url: "https://klawtax.online/",
+          name: "KlawTax.online | Premium Legal & NGO Services in India",
+          isPartOf: { "@id": "https://klawtax.online/#website" },
+          about: { "@id": "https://klawtax.online/#organization" },
+          description: "Trusted legal, NGO, compliance, registration, audit, and digital services with transparent pricing and expert support.",
+          breadcrumb: {
+            "@type": "BreadcrumbList",
+            itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: "https://klawtax.online/" }],
+          },
+        })}
       />
       <Navbar />
       <HeroSection />

@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import SEO from "@/components/shared/SEO";
 
 const NotFound = () => {
   return (
     <div className="flex flex-col min-h-screen">
+      <SEO title="404 — Page Not Found | KlawTax" noindex={true} />
       <Navbar />
       <main role="main" className="flex-1 flex items-center justify-center bg-muted pt-28 pb-16">
         <div className="text-center p-8 bg-card border border-border rounded-2xl max-w-md w-full mx-4 shadow-sm">

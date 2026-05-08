@@ -1,3 +1,6 @@
+# KlawTax.online — robots.txt
+# https://klawtax.online/sitemap.xml
+
 User-agent: *
 Allow: /
 Disallow: /crm/
@@ -5,18 +8,15 @@ Disallow: /checkout
 Disallow: /submit-documents
 Disallow: /dashboard
 
-User-agent: Googlebot
-Allow: /
-Disallow: /crm/
-Disallow: /checkout
-Disallow: /submit-documents
-Disallow: /dashboard
+# Block AI training scrapers
+User-agent: GPTBot
+Disallow: /
 
-User-agent: Bingbot
-Allow: /
-Disallow: /crm/
-Disallow: /checkout
-Disallow: /submit-documents
-Disallow: /dashboard
+User-agent: ChatGPT-User
+Disallow: /
 
+User-agent: CCBot
+Disallow: /
+
+# Sitemap
 Sitemap: https://klawtax.online/sitemap.xml
