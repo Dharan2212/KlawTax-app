@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fadeIn, staggerContainer, staggerItem } from "@/lib/motion";
 import { GroupedTimeline } from "@/components/crm/shared/TimelineItem";
 import type { TimelineEntry as TLEntry } from "@/components/crm/shared/TimelineItem";
+import type { LucideIcon } from "lucide-react";
+
 import {
   ArrowLeft, Calendar, User, CircleCheck, CircleDot, Circle,
   Upload, Check, X, Clock, AlertTriangle, Loader2,
   CheckCircle2, FileText, MessageSquare, CreditCard,
-  ChevronDown, Send,
+  ChevronDown, Send, Activity,
 } from "lucide-react";
 
 const isOverdue = (deadline: string, status: string) =>
@@ -36,11 +38,11 @@ const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string; bg: s
 
 type TabType = "overview" | "tasks" | "submissions" | "updates";
 
-const TABS: { key: TabType; label: string; icon: React.ComponentType<{ size: number; strokeWidth: number }> }[] = [
-  { key: "overview",    label: "Overview",    icon: Activity       },
-  { key: "tasks",       label: "Tasks",       icon: CircleDot      },
-  { key: "submissions", label: "Submissions", icon: FileText       },
-  { key: "updates",     label: "Updates",     icon: MessageSquare  },
+const TABS: { key: TabType; label: string; icon: LucideIcon }[] = [
+  { key: "overview", label: "Overview", icon: Activity },
+  { key: "tasks", label: "Tasks", icon: CircleDot },
+  { key: "submissions", label: "Submissions", icon: FileText },
+  { key: "updates", label: "Updates", icon: MessageSquare },
 ];
 
 export default function ProjectDetail() {
@@ -550,16 +552,40 @@ function ServiceBadge({ label }: { label: string }) {
   );
 }
 
-function PaymentBadge({ status }: { status: "paid" | "pending" | "overdue" }) {
+function PaymentBadge({
+  status,
+}: {
+  status: "paid" | "pending" | "partial" | "overdue";
+}) {
   const map = {
-    paid:    { bg: "rgba(22,163,74,0.10)",   color: "#16A34A", label: "Paid"    },
-    pending: { bg: "rgba(217,119,6,0.10)",   color: "#D97706", label: "Pending" },
-    overdue: { bg: "rgba(239,68,68,0.10)",   color: "#DC2626", label: "Overdue" },
+    paid: {
+      bg: "rgba(22,163,74,0.10)",
+      color: "#16A34A",
+      label: "Paid",
+    },
+    pending: {
+      bg: "rgba(217,119,6,0.10)",
+      color: "#D97706",
+      label: "Pending",
+    },
+    partial: {
+      bg: "rgba(245,158,11,0.10)",
+      color: "#B45309",
+      label: "Partial",
+    },
+    overdue: {
+      bg: "rgba(239,68,68,0.10)",
+      color: "#DC2626",
+      label: "Overdue",
+    },
   };
+
   const cfg = map[status];
   return (
-    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-      style={{ background: cfg.bg, color: cfg.color }}>
+    <span
+      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+      style={{ background: cfg.bg, color: cfg.color }}
+    >
       {cfg.label}
     </span>
   );
@@ -586,7 +612,15 @@ function SubmissionCard({
   sub, rejectingId, rejectReason, setRejectReason, setRejectingId,
   approveSubmission, rejectSubmission,
 }: {
-  sub: { id: string; clientId: string; projectId: string; description: string; status: string; date: string };
+  sub: {
+  id: string;
+  clientId: string;
+  projectId: string;
+  description: string;
+  status: "pending" | "approved" | "rejected";
+  date?: string;
+  submittedAt?: string;
+};
   rejectingId: string | null;
   rejectReason: string;
   setRejectReason: (v: string) => void;
