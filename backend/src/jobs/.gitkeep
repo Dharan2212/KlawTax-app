@@ -1,0 +1,2 @@
+# This directory is reserved for BullMQ scheduled/background jobs.
+# Jobs will be added in subsequent implementation batches.

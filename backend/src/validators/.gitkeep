@@ -1,0 +1,2 @@
+# This directory is reserved for Zod/Joi request validation schemas.
+# Validators will be added in subsequent implementation batches.
