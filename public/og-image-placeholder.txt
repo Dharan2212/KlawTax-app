@@ -1,0 +1,2 @@
+Place og-image.png (1200x630px) in this directory before deployment.
+Recommended: Dark navy background with KlawTax logo and tagline.
