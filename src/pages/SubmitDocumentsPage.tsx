@@ -59,7 +59,7 @@ export default function SubmitDocumentsPage() {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main role="main" className="pt-28 pb-16 flex-1 flex items-center justify-center px-4">
+        <main id="main-content" role="main" className="pt-28 pb-16 flex-1 flex items-center justify-center px-4">
           <motion.div variants={scaleIn} initial="hidden" animate="visible" className="max-w-lg w-full text-center premium-card p-10">
             <div className="flex justify-center mb-6">
               <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center">
@@ -86,7 +86,7 @@ export default function SubmitDocumentsPage() {
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <SEO title="Submit Documents | KlawTax" noindex={true} />
       <Navbar />
-      <main role="main" className="pt-28 pb-20 flex-1">
+      <main id="main-content" role="main" className="pt-28 pb-20 flex-1">
         <div className="container mx-auto px-4">
 
           {/* Status Banner */}

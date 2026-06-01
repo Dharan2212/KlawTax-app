@@ -211,7 +211,7 @@ export const homepageFAQSchema = buildFAQSchema([
   {
     question: "How much does NGO registration cost in India?",
     answer:
-      "NGO registration costs vary by type. Section 8 Company registration starts at ₹8,000. Individual certificates like 12A and 80G start at ₹1,500 each. The complete Section 8 NGO package (Section 8 + 12A + 80G + DARPAN + E-Anudan + Udyam) costs ₹13,500 all-inclusive.",
+      "NGO registration costs vary by type. Section 8 Company registration starts at ₹7,999. Individual certificates like 12A and 80G start at ₹1,500 each. The complete Section 8 NGO package (Section 8 + 12A + 80G + DARPAN + E-Anudan + Udyam) costs ₹13,500 all-inclusive.",
   },
   {
     question: "How long does NGO registration take?",

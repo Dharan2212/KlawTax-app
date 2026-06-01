@@ -12,9 +12,6 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
-      // Proxy all /api calls to the backend during development.
-      // Set VITE_API_BASE_URL="" in .env.local so the client uses relative URLs,
-      // and this proxy will forward them to the backend server.
       "/api": {
         target: process.env.BACKEND_URL || "http://localhost:5000",
         changeOrigin: true,
@@ -23,12 +20,43 @@ export default defineConfig({
     },
   },
   build: {
+    // Raise warning threshold — CRM bundle is intentionally large
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ["react", "react-dom"],
-          router: ["react-router-dom"],
-          motion: ["framer-motion"],
+        manualChunks: (id) => {
+          // React core
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) {
+            return "react";
+          }
+          // Router
+          if (id.includes("node_modules/react-router") || id.includes("node_modules/@remix-run")) {
+            return "router";
+          }
+          // Animation
+          if (id.includes("node_modules/framer-motion")) {
+            return "motion";
+          }
+          // Radix UI / shadcn (shared UI primitives)
+          if (id.includes("node_modules/@radix-ui")) {
+            return "radix";
+          }
+          // State / query
+          if (id.includes("node_modules/@tanstack") || id.includes("node_modules/zustand")) {
+            return "state";
+          }
+          // CRM pages & components — lazy loaded, separate chunk
+          if (
+            id.includes("/src/app/crm/") ||
+            id.includes("/src/components/crm/") ||
+            id.includes("/src/pages/crm/")
+          ) {
+            return "crm";
+          }
+          // Lucide icons (large, shared)
+          if (id.includes("node_modules/lucide-react")) {
+            return "icons";
+          }
         },
       },
     },

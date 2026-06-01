@@ -13,13 +13,17 @@ import CRMLayout from "@/components/crm/CRMLayout";
 import { syncAuthToCRMStore } from "./initCRMData";
 
 // Admin
-import AdminDashboard    from "@/components/crm/admin/AdminDashboard";
-import ClientManagement  from "@/components/crm/admin/ClientManagement";
-import ProjectManagement from "@/components/crm/admin/ProjectManagement";
+import AdminDashboard       from "@/components/crm/admin/AdminDashboard";
+import ClientManagement    from "@/components/crm/admin/ClientManagement";
+import EmployeeManagement  from "@/components/crm/admin/EmployeeManagement";
+import ProjectManagement   from "@/components/crm/admin/ProjectManagement";
 import ProjectDetail     from "@/components/crm/admin/ProjectDetail";
 import ApprovalQueue     from "@/components/crm/admin/ApprovalQueue";
 import PaymentsPanel     from "@/components/crm/admin/PaymentsPanel";
 import ReportsPanel      from "@/components/crm/admin/ReportsPanel";
+import FollowUpCenter    from "@/components/crm/admin/FollowUpCenter";
+import LeadsManagement   from "@/components/crm/admin/LeadsManagement";
+import SupportManagement from "@/components/crm/admin/SupportManagement";
 
 // Employee
 import EmployeeDashboard from "@/components/crm/employee/EmployeeDashboard";
@@ -40,11 +44,15 @@ function AdminPanel() {
     <Routes>
       <Route path="/"                    element={<AdminDashboard />} />
       <Route path="/clients"             element={<ClientManagement />} />
+      <Route path="/employees"           element={<EmployeeManagement />} />
       <Route path="/projects"            element={<ProjectManagement />} />
       <Route path="/projects/:projectId" element={<ProjectDetail />} />
       <Route path="/approvals"           element={<ApprovalQueue />} />
       <Route path="/payments"            element={<PaymentsPanel />} />
       <Route path="/reports"             element={<ReportsPanel />} />
+      <Route path="/followups"           element={<FollowUpCenter />} />
+      <Route path="/leads"               element={<LeadsManagement />} />
+      <Route path="/support"             element={<SupportManagement />} />
       <Route path="*"                    element={<Navigate to="/crm/admin" replace />} />
     </Routes>
   );

@@ -1,21 +1,23 @@
 import { useState, useEffect } from "react";
-import { Menu, Bell, Search, ChevronRight, LogOut } from "lucide-react";
+import { Menu, Bell, Search, ChevronRight, LogOut, AlertCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import NotificationCenter from "./shared/NotificationCenter";
-import { fetchUnreadCount } from "@/lib/crmApi";
+import { fetchUnreadCount, fetchFollowUpCounts, type FollowUpCounts } from "@/lib/crmApi";
 
 interface CRMNavbarProps {
   onMenuToggle?: () => void;
 }
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/crm/admin":           "Dashboard",
-  "/crm/admin/clients":   "Client Management",
-  "/crm/admin/projects":  "Projects",
-  "/crm/admin/approvals": "Approval Queue",
-  "/crm/admin/payments":  "Payments",
-  "/crm/admin/reports":   "Reports",
+  "/crm/admin":             "Dashboard",
+  "/crm/admin/clients":     "Client Management",
+  "/crm/admin/employees":   "Employees",
+  "/crm/admin/projects":    "Projects",
+  "/crm/admin/approvals":   "Approval Queue",
+  "/crm/admin/payments":    "Payments",
+  "/crm/admin/reports":     "Reports",
+  "/crm/admin/followups":   "Follow-Up Center",
   "/crm/employee":          "Dashboard",
   "/crm/employee/projects": "My Projects",
   "/crm/client":            "Dashboard",
@@ -32,8 +34,9 @@ const ROLE_CONFIG: Record<string, { label: string; dot: string; badge: string; t
 };
 
 export default function CRMNavbar({ onMenuToggle }: CRMNavbarProps) {
-  const [notifOpen, setNotifOpen]   = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen,    setNotifOpen]    = useState(false);
+  const [unreadCount,  setUnreadCount]  = useState(0);
+  const [followUps,    setFollowUps]    = useState<FollowUpCounts | null>(null);
   const location  = useLocation();
   const navigate  = useNavigate();
   const { user, role, logout } = useAuth();
@@ -43,20 +46,38 @@ export default function CRMNavbar({ onMenuToggle }: CRMNavbarProps) {
   const pageLabel   = ROUTE_LABELS[location.pathname] ?? "Overview";
   const userInitial = user ? (user.firstName?.charAt(0) ?? "U").toUpperCase() : "U";
   const userName    = user ? `${user.firstName} ${user.lastName}` : "User";
+  const isAdmin     = currentRole === "admin" || currentRole === "employee";
+
+  // Combined operational badge: unread notifications + overdue follow-ups
+  const overdueFollowUps = followUps?.overdue ?? 0;
+  const todayFollowUps   = followUps?.today   ?? 0;
+  const totalBadge       = unreadCount + overdueFollowUps;
 
   // Poll unread notification count
   useEffect(() => {
     let mounted = true;
+
     async function poll() {
       try {
         const count = await fetchUnreadCount();
         if (mounted) setUnreadCount(count);
       } catch { /* silent */ }
     }
+
+    // Only fetch follow-up counts for admin/employee
+    async function pollFollowUps() {
+      if (!isAdmin) return;
+      try {
+        const counts = await fetchFollowUpCounts();
+        if (mounted) setFollowUps(counts);
+      } catch { /* silent */ }
+    }
+
     poll();
-    const timer = setInterval(poll, 30_000);
+    pollFollowUps();
+    const timer = setInterval(() => { poll(); pollFollowUps(); }, 30_000);
     return () => { mounted = false; clearInterval(timer); };
-  }, []);
+  }, [isAdmin]);
 
   async function handleLogout() {
     await logout();
@@ -106,19 +127,48 @@ export default function CRMNavbar({ onMenuToggle }: CRMNavbarProps) {
             <span>Search...</span>
           </button>
 
+          {/* Follow-up quick indicator (admin/employee only, shows when there are overdue or today) */}
+          {isAdmin && (overdueFollowUps > 0 || todayFollowUps > 0) && (
+            <button
+              onClick={() => navigate("/crm/admin/followups")}
+              title={`${overdueFollowUps} overdue · ${todayFollowUps} today`}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-150"
+              style={{
+                background: overdueFollowUps > 0 ? "rgba(220,38,38,0.08)" : "rgba(217,119,6,0.08)",
+                border:     overdueFollowUps > 0 ? "1px solid rgba(220,38,38,0.20)" : "1px solid rgba(217,119,6,0.20)",
+                color:      overdueFollowUps > 0 ? "#DC2626" : "#B45309",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+            >
+              <AlertCircle size={11} strokeWidth={2.5} />
+              <span className="text-[10px] font-bold" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                {overdueFollowUps > 0 ? `${overdueFollowUps} overdue` : `${todayFollowUps} today`}
+              </span>
+            </button>
+          )}
+
           {/* Notification bell */}
           <button
             onClick={() => setNotifOpen(v => !v)}
-            aria-label={`${unreadCount} unread notifications`}
+            aria-label={`${totalBadge} unread notifications and follow-ups`}
             className="relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-neutral-100"
           >
             <Bell size={16} strokeWidth={2} style={{ color: "hsl(215 16% 47%)" }} />
-            {unreadCount > 0 && (
+            {totalBadge > 0 && (
               <span
                 className="absolute -top-0.5 -right-0.5 text-[9px] font-bold flex items-center justify-center rounded-full"
-                style={{ background: "#DC2626", color: "white", minWidth: "14px", height: "14px", padding: "0 3px", border: "1.5px solid white", fontFamily: "'DM Sans', sans-serif" }}
+                style={{
+                  background: overdueFollowUps > 0 ? "#DC2626" : "#1E3A8A",
+                  color: "white",
+                  minWidth: "14px",
+                  height: "14px",
+                  padding: "0 3px",
+                  border: "1.5px solid white",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
               >
-                {unreadCount > 9 ? "9+" : unreadCount}
+                {totalBadge > 9 ? "9+" : totalBadge}
               </span>
             )}
           </button>
@@ -152,7 +202,7 @@ export default function CRMNavbar({ onMenuToggle }: CRMNavbarProps) {
         </div>
       </header>
 
-      <NotificationCenter open={notifOpen} onClose={() => setNotifOpen(false)} />
+      <NotificationCenter open={notifOpen} onClose={() => setNotifOpen(false)} followUpCounts={followUps} />
     </>
   );
 }

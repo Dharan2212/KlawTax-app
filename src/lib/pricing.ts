@@ -1,3 +1,20 @@
+// ============================================================
+// KlawTax — Pricing Module
+// Version: 4.0 (Batch A — Single Source of Truth)
+//
+// This file is the CANONICAL pricing re-export hub.
+// All pricing data originates from services.ts.
+// DO NOT define prices here — import and re-export only.
+// ============================================================
+
+// Re-export the canonical package definition from services.ts
+export { COMPLETE_PACKAGE, featuredPackage } from "@/lib/services";
+
+// ─── Pricing Plans (for PricingTable component) ──────────────
+// These pull their price values from COMPLETE_PACKAGE where applicable.
+
+import { COMPLETE_PACKAGE } from "@/lib/services";
+
 export interface PricingPlan {
   id: string;
   name: string;
@@ -36,21 +53,13 @@ export const pricingPlans: PricingPlan[] = [
     id: "complete-ngo",
     name: "Complete NGO Package",
     description: "Everything your NGO needs from incorporation to CSR-eligibility — in one bundle.",
-    price: 13500,
-    advancePrice: 6750,
-    originalPrice: 17000,
+    price: COMPLETE_PACKAGE.price,
+    advancePrice: COMPLETE_PACKAGE.advancePrice,
+    originalPrice: COMPLETE_PACKAGE.originalPrice,
     popular: true,
     badge: "MOST POPULAR",
     serviceCount: 7,
-    features: [
-      "Section 8 Company Registration",
-      "12A Income Tax Exemption",
-      "80G Donor Deduction Certificate",
-      "NGO DARPAN Registration",
-      "E-Anudan Portal Setup",
-      "Udyam (MSME) Registration",
-      "PAN, TAN, DSC & DIN Included",
-    ],
+    features: COMPLETE_PACKAGE.services,
     cta: "Get Complete Package",
     href: "/checkout?service=section8-complete",
   },
@@ -72,6 +81,10 @@ export const pricingPlans: PricingPlan[] = [
   },
 ];
 
+// ─── All Price Items (for Pricing Page table) ────────────────
+// Derived from services.ts — manually curated for the pricing table display.
+// Prices MUST match services.ts priceNumeric values exactly.
+
 export interface PriceItem {
   service: string;
   price: string;
@@ -81,17 +94,19 @@ export interface PriceItem {
 }
 
 export const allPriceItems: PriceItem[] = [
-  // NGO Certificates
-  { service: "Section 8 Complete Package",    price: "₹13,500",        category: "NGO",        href: "/checkout?service=section8-complete",           highlight: true },
+  // NGO — Featured
+  { service: "Section 8 Complete Package",    price: `₹${COMPLETE_PACKAGE.price.toLocaleString("en-IN")}`, category: "NGO", href: "/checkout?service=section8-complete", highlight: true },
+  // NGO Registrations
   { service: "Section 8 Registration",        price: "₹7,999",         category: "NGO",        href: "/services/section-8-registration" },
+  { service: "Society Registration",          price: "₹5,999",         category: "NGO",        href: "/services/society-registration" },
+  { service: "Public Trust Registration",     price: "₹6,499",         category: "NGO",        href: "/services/public-trust-registration" },
+  // NGO Certificates
   { service: "Provisional 12A Registration",  price: "₹1,500",         category: "NGO",        href: "/services/12a-registration" },
   { service: "Provisional 80G Certificate",   price: "₹1,500",         category: "NGO",        href: "/services/80g-registration" },
   { service: "CSR-1 Registration",            price: "₹3,500",         category: "NGO",        href: "/services/csr-registration" },
   { service: "NGO DARPAN Registration",       price: "₹1,500",         category: "NGO",        href: "/services/darpan-registration" },
   { service: "E-Anudan Registration",         price: "₹500",           category: "NGO",        href: "/services/e-anudan-registration" },
   { service: "Udyam Registration",            price: "₹500",           category: "NGO",        href: "/services/udyam-registration" },
-  { service: "Society Registration",          price: "₹5,999",         category: "NGO",        href: "/services/society-registration" },
-  { service: "Public Trust Registration",     price: "₹6,499",         category: "NGO",        href: "/services/public-trust-registration" },
   // NGO Compliance
   { service: "Audit + UDIN",                  price: "₹2,500",         category: "Compliance", href: "/services/ngo-audit-udin" },
   { service: "ITR Filing (NGO / Trust)",      price: "₹1,500",         category: "Compliance", href: "/services/ngo-itr-filing" },
@@ -113,7 +128,7 @@ export const allPriceItems: PriceItem[] = [
   // Licenses
   { service: "FSSAI Basic Registration",      price: "₹999",           category: "Business",   href: "/services/fssai-registration" },
   { service: "Shop Act / Gumasta",            price: "₹1,000",         category: "Business",   href: "/services/shop-act-registration" },
-  { service: "GST Registration",              price: "₹1,500",         category: "Business",   href: "/services/gst-registration" },
+  { service: "GST Registration",             price: "₹1,500",         category: "Business",   href: "/services/gst-registration" },
   // Director & MCA
   { service: "DIN Allotment",                 price: "₹1,500",         category: "Business",   href: "/services/din-allotment" },
   { service: "DIR-3 KYC",                     price: "₹700",           category: "Business",   href: "/services/dir-3-kyc" },
@@ -144,23 +159,3 @@ export const allPriceItems: PriceItem[] = [
   { service: "Android App Development",       price: "₹19,999 onwards",category: "Digital",    href: "/services/android-app-development" },
   { service: "Cross-Platform App",            price: "₹34,999 onwards",category: "Digital",    href: "/services/cross-platform-app" },
 ];
-
-// Alias for FeaturedPackage component
-export const featuredPackage = {
-  id: "section8-complete",
-  name: "Complete NGO Setup in One Package",
-  description: "Everything you need from incorporation to CSR-eligibility, handled end-to-end by our legal experts.",
-  price: 13500,
-  advancePrice: 6750,
-  originalPrice: 17000,
-  savings: 3500,
-  features: [
-    "Section 8 Company Registration",
-    "12A Income Tax Exemption",
-    "80G Donor Deduction Certificate",
-    "NGO DARPAN Registration",
-    "E-Anudan Portal Setup",
-    "Udyam (MSME) Registration",
-    "PAN, TAN, DSC & DIN Included",
-  ],
-};

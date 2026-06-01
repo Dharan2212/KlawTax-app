@@ -45,6 +45,8 @@ export interface ApiLead {
   serviceName?: string;
   message?: string;
   status: string;
+  priority?: string;
+  leadSource?: string;
   assignedTo?: string;
   followUpDate?: string;
   createdAt: string;
@@ -142,88 +144,536 @@ export interface ApiTimelineEntry {
   createdAt: string;
 }
 
-// ─── Admin Dashboard ──────────────────────────────────────────
+// ─── Admin Dashboard (Batch 5.1 — matches backend AdminDashboardResponse) ─────
 
-export interface AdminDashboard {
-  activeProjectCount:    number;
-  overdueProjectCount:   number;
-  stalledProjectCount:   number;
-  pendingApprovalsCount: number;
-  newLeadsToday:         number;
-  revenueThisMonth:      number;
-  revenueLastMonth:      number;
-  overdueProjects:       ApiProject[];
-  recentTimelineEntries: ApiTimelineEntry[];
-  pendingApprovalsList:  ApiApproval[];
-  employeeWorkloadSummary: { employeeId: string; name: string; projectCount: number }[];
+export interface AdminRevenueSummary {
+  totalCollected:  number; // paise
+  periodCollected: number;
+  todayCollected:  number;
+  weekCollected:   number;
+  monthCollected:  number;
+  byStatus: {
+    paid:          number;
+    partiallyPaid: number;
+    overdue:       number;
+    disputed:      number;
+    outstanding:   number;
+  };
+  pendingAdvances: number;
+  invoiceCounts: {
+    total:         number;
+    paid:          number;
+    partiallyPaid: number;
+    overdue:       number;
+    disputed:      number;
+    draft:         number;
+    cancelled:     number;
+  };
 }
 
-export async function fetchAdminDashboard(): Promise<AdminDashboard> {
-  return get<AdminDashboard>("/dashboard/admin");
+export interface AdminOverdueProjectsSummary {
+  total:        number;
+  byStatus:     Record<string, number>;
+  byPriority:   Record<string, number>;
+  ageBuckets:   { label: string; count: number }[];
+  stalledCount: number;
+  preview: {
+    projectId:             string;
+    projectNumber:         string;
+    status:                string;
+    priority:              string;
+    daysOverdue:           number;
+    expectedDeliveryDate?: string;
+  }[];
 }
 
-export async function fetchAdminRevenue(): Promise<{ thisMonth: number; lastMonth: number; total: number }> {
-  return get("/dashboard/admin/revenue");
+export interface AdminPendingApprovalsSummary {
+  total:             number;
+  pending:           number;
+  underReview:       number;
+  revisionRequested: number;
+  overdueByAge: {
+    overOneDayCount:   number;
+    overThreeDayCount: number;
+    overSevenDayCount: number;
+  };
+  preview: {
+    approvalId:        string;
+    approvalType:      string;
+    priority:          string;
+    submittedAt:       string;
+    daysPending:       number;
+    resubmissionCount: number;
+  }[];
 }
 
-export async function fetchOverdueProjects(): Promise<ApiProject[]> {
-  return get<ApiProject[]>("/dashboard/admin/overdue-projects");
+export interface AdminLeadMetricsSummary {
+  total:           number;
+  active:          number;
+  periodNew:       number;
+  todayNew:        number;
+  weekNew:         number;
+  monthNew:        number;
+  byStatus: {
+    new:          number;
+    contacted:    number;
+    qualified:    number;
+    proposalSent: number;
+    onboarding:   number;
+    converted:    number;
+    lost:         number;
+    archived:     number;
+  };
+  conversionRate:  number;
+  followUpOverdue: number;
+  unassigned:      number;
+  last7DaysTrend:  { date: string; count: number }[];
 }
 
-export async function fetchPendingApprovals(): Promise<ApiApproval[]> {
-  return get<ApiApproval[]>("/dashboard/admin/approvals");
+export interface AdminWorkloadSummary {
+  totalActiveProjects:     number;
+  totalUnassignedProjects: number;
+  totalBlockedTasks:       number;
+  totalOverdueTasks:       number;
+  inReviewProjects:        number;
+  waitingClientProjects:   number;
+  employeeWorkload: {
+    employeeId:       string;
+    name:             string;
+    activeProjects:   number;
+    activeTasks:      number;
+    overdueTasks:     number;
+    blockedTasks:     number;
+    inReviewProjects: number;
+  }[];
+  tasksByStatus: {
+    todo:       number;
+    inProgress: number;
+    inReview:   number;
+    blocked:    number;
+    completed:  number;
+  };
 }
 
-// ─── Employee Dashboard ───────────────────────────────────────
+export interface AdminRecentActivity {
+  projects:  { projectId: string; projectNumber: string; status: string; updatedAt: string }[];
+  leads:     { leadId: string; fullName: string; phone: string; status: string; source: string; createdAt: string }[];
+  payments:  { paymentId: string; invoiceId: string; amountPaise: number; status: string; method: string; initiatedAt: string }[];
+  approvals: { approvalId: string; approvalType: string; status: string; submittedAt: string; daysPending: number }[];
+  support:   { ticketId: string; ticketNumber: string; subject: string; status: string; priority: string; createdAt: string }[];
+  exports:   { exportId: string; exportType: string; status: string; requestedAt: string }[];
+}
+
+/** New full admin dashboard response shape — Batch 5.1 */
+export interface AdminDashboardResponse {
+  generatedAt:      string;
+  period:           string;
+  dateRange:        { from: string; to: string };
+  revenue:          AdminRevenueSummary;
+  overdueProjects:  AdminOverdueProjectsSummary;
+  pendingApprovals: AdminPendingApprovalsSummary;
+  leads:            AdminLeadMetricsSummary;
+  workload:         AdminWorkloadSummary;
+  recentActivity:   AdminRecentActivity;
+  clientStats:      AdminClientStats;
+  followUpCounts:   FollowUpCounts;
+}
+
+export interface AdminClientStats {
+  totalClients:      number;
+  activeClients:     number;
+  newClientsToday:   number;
+  newClientsMonth:   number;
+  activeEmployees:   number;
+}
+
+export interface FollowUpCounts {
+  overdue:  number;
+  today:    number;
+  upcoming: number;
+  total:    number;
+}
+
+/** Legacy alias kept so other files that import AdminDashboard don't break */
+export type AdminDashboard = AdminDashboardResponse;
+
+export async function fetchAdminDashboard(
+  params?: { period?: string; limit?: number },
+): Promise<AdminDashboardResponse> {
+  const q = new URLSearchParams();
+  if (params?.period) q.set("period", params.period);
+  if (params?.limit)  q.set("limit",  String(params.limit));
+  const qs = q.toString();
+  return get<AdminDashboardResponse>(`/dashboard/admin${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchAdminRevenueSummary(period?: string): Promise<AdminRevenueSummary> {
+  return get<AdminRevenueSummary>(`/dashboard/admin/revenue${period ? `?period=${period}` : ""}`);
+}
+
+export async function fetchAdminOverdueSummary(): Promise<AdminOverdueProjectsSummary> {
+  return get<AdminOverdueProjectsSummary>("/dashboard/admin/overdue-projects");
+}
+
+export async function fetchAdminApprovalsSummary(): Promise<AdminPendingApprovalsSummary> {
+  return get<AdminPendingApprovalsSummary>("/dashboard/admin/approvals");
+}
+
+export async function fetchAdminLeadsSummary(period?: string): Promise<AdminLeadMetricsSummary> {
+  return get<AdminLeadMetricsSummary>(`/dashboard/admin/leads${period ? `?period=${period}` : ""}`);
+}
+
+export async function fetchAdminWorkloadSummary(): Promise<AdminWorkloadSummary> {
+  return get<AdminWorkloadSummary>("/dashboard/admin/workload");
+}
+
+export async function fetchAdminRecentActivity(limit?: number): Promise<AdminRecentActivity> {
+  return get<AdminRecentActivity>(`/dashboard/admin/activity${limit ? `?limit=${limit}` : ""}`);
+}
+
+// Legacy compat shims (kept so old import sites compile)
+export async function fetchAdminRevenue() { return fetchAdminRevenueSummary(); }
+export async function fetchOverdueProjects() { return fetchAdminOverdueSummary(); }
+export async function fetchPendingApprovals() { return fetchAdminApprovalsSummary(); }
+
+// ─── Employee Dashboard — Rich Types (Batch 5.2) ──────────────
+
+export interface EmpTaskCountSummary {
+  total: number;
+  active: number;
+  blocked: number;
+  overdue: number;
+  completed: number;
+  waitingReview: number;
+  todo: number;
+}
+
+export interface EmpTaskPreviewItem {
+  taskId: string;
+  title: string;
+  taskStatus: string;
+  taskPriority: string;
+  projectId: string;
+  projectCode: string;
+  dueDate?: string;
+  isOverdue: boolean;
+  isBlocked: boolean;
+}
+
+export interface EmpAssignedTaskSummary {
+  counts: EmpTaskCountSummary;
+  recentlyAssigned: EmpTaskPreviewItem[];
+  overdueTasks: EmpTaskPreviewItem[];
+  dueTodayTasks: EmpTaskPreviewItem[];
+}
+
+export interface EmpDueTodayItem {
+  type: 'task' | 'project';
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string;
+  isOverdue: boolean;
+  projectCode?: string;
+}
+
+export interface EmpDueTodaySummary {
+  total: number;
+  overdue: number;
+  items: EmpDueTodayItem[];
+}
+
+export interface EmpPendingReviewItem {
+  approvalId: string;
+  approvalType: string;
+  approvalStatus: string;
+  reviewPriority: string;
+  projectId?: string;
+  projectCode?: string;
+  taskId?: string;
+  taskTitle?: string;
+  submittedAt?: string;
+  resubmissionCount: number;
+}
+
+export interface EmpPendingReviewSummary {
+  total: number;
+  pending: number;
+  underReview: number;
+  revisionRequested: number;
+  items: EmpPendingReviewItem[];
+}
+
+export interface EmpProjectPreviewItem {
+  projectId: string;
+  projectCode: string;
+  clientName: string;
+  serviceName: string;
+  projectStatus: string;
+  projectPriority: string;
+  isOverdue: boolean;
+  isStalled: boolean;
+  expectedDeliveryDate?: string;
+  openTaskCount: number;
+  completedTaskCount: number;
+  lastActivityAt?: string;
+}
+
+export interface EmpActiveProjectSummary {
+  total: number;
+  active: number;
+  waitingClient: number;
+  inReview: number;
+  overdue: number;
+  stalled: number;
+  projects: EmpProjectPreviewItem[];
+}
+
+export interface EmpWorkloadSummary {
+  openTasks: number;
+  blockedTasks: number;
+  overdueTasks: number;
+  waitingReviewTasks: number;
+  activeProjects: number;
+  overdueProjects: number;
+  stalledProjects: number;
+  pendingApprovals: number;
+  completedTodayTasks: number;
+}
 
 export interface EmployeeDashboard {
-  assignedProjectCount: number;
-  tasksOverdueCount:    number;
-  tasksDueToday:        number;
-  pendingSubmissions:   number;
-  recentProjects:       ApiProject[];
-  myTasksList:          ApiTask[];
+  employeeId: string;
+  employeeProfileId: string;
+  generatedAt: string;
+  window: string;
+  workload: EmpWorkloadSummary;
+  tasks: EmpAssignedTaskSummary;
+  dueToday: EmpDueTodaySummary;
+  pendingReviews: EmpPendingReviewSummary;
+  activeProjects: EmpActiveProjectSummary;
 }
 
 export async function fetchEmployeeDashboard(): Promise<EmployeeDashboard> {
   return get<EmployeeDashboard>("/dashboard/employee");
 }
 
-export async function fetchEmployeeTasks(): Promise<ApiTask[]> {
-  return get<ApiTask[]>("/dashboard/employee/tasks");
+export async function fetchEmployeeWorkload(): Promise<EmpWorkloadSummary> {
+  return get<EmpWorkloadSummary>("/dashboard/employee/workload");
 }
 
-// ─── Client Dashboard ─────────────────────────────────────────
-
-export interface ClientDashboard {
-  activeProjects:        ApiProject[];
-  completedProjects:     ApiProject[];
-  pendingPayments:       ApiInvoice[];
-  recentTimelineEntries: ApiTimelineEntry[];
+export async function fetchEmployeeTaskSummary(): Promise<EmpAssignedTaskSummary> {
+  return get<EmpAssignedTaskSummary>("/dashboard/employee/tasks");
 }
 
-export async function fetchClientDashboard(): Promise<ClientDashboard> {
-  return get<ClientDashboard>("/dashboard/client");
+export async function fetchEmployeeDueToday(): Promise<EmpDueTodaySummary> {
+  return get<EmpDueTodaySummary>("/dashboard/employee/due-today");
 }
 
-export async function fetchClientProjects(): Promise<ApiProject[]> {
-  return get<ApiProject[]>("/dashboard/client/projects");
+export async function fetchEmployeePendingReviews(): Promise<EmpPendingReviewSummary> {
+  return get<EmpPendingReviewSummary>("/dashboard/employee/reviews");
 }
 
-export async function fetchClientProjectById(id: string): Promise<ApiProject> {
-  return get<ApiProject>(`/dashboard/client/projects/${id}`);
+export async function fetchEmployeeActiveProjects(): Promise<EmpActiveProjectSummary> {
+  return get<EmpActiveProjectSummary>("/dashboard/employee/projects");
 }
 
-export async function fetchClientPayments(): Promise<ApiInvoice[]> {
-  return get<ApiInvoice[]>("/dashboard/client/payments");
+// ─── Client Portal Types (match backend clientDashboardService + portalAggregations) ───
+
+/** Lean project summary returned by client portal — NOT the full ApiProject */
+export interface ClientProjectSummary {
+  projectId:            string;
+  projectCode:          string;
+  title:                string;
+  primaryServiceSlug:   string;
+  projectStatus:        string;
+  isOverdue:            boolean;
+  isStalled:            boolean;
+  expectedDeliveryDate?: string;
+  progressPercentage:   number;
+  pendingDocuments:     number;
 }
 
-export async function fetchClientTimeline(): Promise<ApiTimelineEntry[]> {
-  return get<ApiTimelineEntry[]>("/dashboard/client/timeline");
+/** Lean invoice summary returned by client portal */
+export interface ClientInvoiceSummary {
+  invoiceId:     string;
+  invoiceNumber: string;
+  invoiceStatus: string;
+  totalAmount:   number;
+  amountPaid:    number;
+  amountDue:     number;
+  dueDate?:      string;
 }
 
-export async function fetchClientDocuments(): Promise<unknown[]> {
-  return get<unknown[]>("/dashboard/client/documents");
+/** Client-visible timeline entry (lean) */
+export interface ClientTimelineEntry {
+  entryId:      string;
+  eventType:    string;
+  title:        string;
+  description?: string;
+  createdAt:    string;
+}
+
+/** Full dashboard snapshot — GET /dashboard/client */
+export interface ClientDashboardSnapshot {
+  clientProfileId: string;
+  totals: {
+    activeProjects:      number;
+    completedProjects:   number;
+    overdueProjects:     number;
+    pendingPayments:     number;
+    unreadNotifications: number;
+    openSupportTickets:  number;
+  };
+  activeProjects:  ClientProjectSummary[];
+  recentTimeline:  ClientTimelineEntry[];
+  pendingInvoices: ClientInvoiceSummary[];
+}
+
+/** Paginated project list — GET /dashboard/client/projects */
+export interface ClientProjectListResponse {
+  projects: ClientProjectSummary[];
+  meta:     { page: number; limit: number; total: number; pages: number };
+}
+
+/** Payment summary — GET /dashboard/client/payments */
+export interface ClientPaymentSummary {
+  totalInvoiced:    number;
+  totalPaid:        number;
+  totalOutstanding: number;
+  invoices: Array<{
+    invoiceId:     string;
+    invoiceNumber: string;
+    invoiceStatus: string;
+    totalAmount:   number;
+    amountPaid:    number;
+    amountDue:     number;
+    dueDate?:      string;
+    projectTitle?: string;
+  }>;
+  recentPayments: Array<{
+    paymentId:     string;
+    amount:        number;
+    paymentStatus: string;
+    paymentMethod: string;
+    capturedAt?:   string;
+    invoiceNumber: string;
+  }>;
+}
+
+/** Timeline feed page — GET /dashboard/client/timeline */
+export interface ClientTimelineFeedResponse {
+  entries: Array<{
+    entryId:      string;
+    eventType:    string;
+    title:        string;
+    description?: string;
+    projectCode:  string;
+    projectTitle: string;
+    createdAt:    string;
+  }>;
+  meta: { page: number; limit: number; total: number; pages: number };
+}
+
+/** Document list — GET /dashboard/client/documents */
+export interface ClientDocument {
+  documentId:      string;
+  title:           string;
+  fileName:        string;
+  mimeType:        string;
+  fileSizeBytes:   number;
+  documentCategory: string;
+  documentStatus:  string;
+  versionNumber:   number;
+  projectCode:     string;
+  projectTitle:    string;
+  uploadedAt:      string;
+}
+
+export interface ClientDocumentsResponse {
+  documents: ClientDocument[];
+  meta:      { page: number; limit: number; total: number; pages: number };
+}
+
+/** Project detail — GET /dashboard/client/projects/:id */
+export interface ClientProjectDetail {
+  projectId:             string;
+  projectCode:           string;
+  title:                 string;
+  primaryServiceSlug:    string;
+  projectStatus:         string;
+  isOverdue:             boolean;
+  isStalled:             boolean;
+  expectedDeliveryDate?: string;
+  progressPercentage:    number;
+  assignedEmployeeName?: string;
+  timeline: ClientTimelineEntry[];
+  invoiceSummary: {
+    invoiceStatus: string;
+    totalAmount:   number;
+    amountPaid:    number;
+    amountDue:     number;
+  } | null;
+  documents: {
+    total:         number;
+    approved:      number;
+    pendingReview: number;
+  };
+}
+
+/** Legacy alias — kept so existing code that uses ClientDashboard doesn't break */
+export type ClientDashboard = ClientDashboardSnapshot;
+
+// ─── Client Dashboard API Functions ──────────────────────────
+
+export async function fetchClientDashboard(): Promise<ClientDashboardSnapshot> {
+  return get<ClientDashboardSnapshot>("/dashboard/client");
+}
+
+export async function fetchClientProjects(
+  opts: { page?: number; limit?: number; status?: string } = {}
+): Promise<ClientProjectListResponse> {
+  const q = new URLSearchParams();
+  if (opts.page)   q.set("page",   String(opts.page));
+  if (opts.limit)  q.set("limit",  String(opts.limit));
+  if (opts.status) q.set("status", opts.status);
+  return get<ClientProjectListResponse>(`/dashboard/client/projects${q.toString() ? `?${q}` : ""}`);
+}
+
+export async function fetchClientProjectById(id: string): Promise<ClientProjectDetail> {
+  return get<ClientProjectDetail>(`/dashboard/client/projects/${id}`);
+}
+
+export async function fetchClientPayments(): Promise<ClientPaymentSummary> {
+  return get<ClientPaymentSummary>("/dashboard/client/payments");
+}
+
+export async function fetchClientTimeline(
+  opts: { page?: number; limit?: number } = {}
+): Promise<ClientTimelineFeedResponse> {
+  const q = new URLSearchParams();
+  if (opts.page)  q.set("page",  String(opts.page));
+  if (opts.limit) q.set("limit", String(opts.limit));
+  return get<ClientTimelineFeedResponse>(`/dashboard/client/timeline${q.toString() ? `?${q}` : ""}`);
+}
+
+export async function fetchClientDocuments(
+  opts: { page?: number; limit?: number; projectId?: string } = {}
+): Promise<ClientDocumentsResponse> {
+  const q = new URLSearchParams();
+  if (opts.page)      q.set("page",      String(opts.page));
+  if (opts.limit)     q.set("limit",     String(opts.limit));
+  if (opts.projectId) q.set("projectId", opts.projectId);
+  return get<ClientDocumentsResponse>(`/dashboard/client/documents${q.toString() ? `?${q}` : ""}`);
+}
+
+export async function fetchClientNotifications(
+  opts: { page?: number; limit?: number } = {}
+): Promise<{ unreadCount: number; notifications: ApiNotification[]; meta: unknown }> {
+  const q = new URLSearchParams();
+  if (opts.page)  q.set("page",  String(opts.page));
+  if (opts.limit) q.set("limit", String(opts.limit));
+  return get(`/dashboard/client/notifications${q.toString() ? `?${q}` : ""}`);
 }
 
 // ─── Projects ─────────────────────────────────────────────────
@@ -235,6 +685,11 @@ export interface ProjectsQuery {
   page?: number;
   limit?: number;
   search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  isOverdue?: string;
+  isStalled?: string;
+  priority?: string;
 }
 
 export async function fetchProjects(query: ProjectsQuery = {}): Promise<{ projects: ApiProject[]; total: number; meta: unknown }> {
@@ -245,6 +700,11 @@ export async function fetchProjects(query: ProjectsQuery = {}): Promise<{ projec
   if (query.page)       params.set("page",        String(query.page));
   if (query.limit)      params.set("limit",       String(query.limit ?? 20));
   if (query.search)     params.set("search",      query.search);
+  if (query.sortBy)     params.set("sortBy",      query.sortBy);
+  if (query.sortOrder)  params.set("sortOrder",   query.sortOrder);
+  if (query.isOverdue)  params.set("isOverdue",   query.isOverdue);
+  if (query.isStalled)  params.set("isStalled",   query.isStalled);
+  if (query.priority)   params.set("priority",    query.priority);
   return get(`/projects?${params.toString()}`);
 }
 
@@ -301,14 +761,28 @@ export interface LeadsQuery {
   page?: number;
   limit?: number;
   search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  priority?: string;
+  assignedTo?: string;
+  unassigned?: string;
+  createdAfter?: string;
+  createdBefore?: string;
 }
 
 export async function fetchLeads(query: LeadsQuery = {}): Promise<{ leads: ApiLead[]; total: number; meta: unknown }> {
   const params = new URLSearchParams();
-  if (query.status) params.set("status", query.status);
-  if (query.page)   params.set("page",   String(query.page));
-  if (query.limit)  params.set("limit",  String(query.limit ?? 20));
-  if (query.search) params.set("search", query.search);
+  if (query.status)        params.set("status",        query.status);
+  if (query.page)          params.set("page",          String(query.page));
+  if (query.limit)         params.set("limit",         String(query.limit ?? 20));
+  if (query.search)        params.set("search",        query.search);
+  if (query.sortBy)        params.set("sortBy",        query.sortBy);
+  if (query.sortOrder)     params.set("sortOrder",     query.sortOrder);
+  if (query.priority)      params.set("priority",      query.priority);
+  if (query.assignedTo)    params.set("assignedTo",    query.assignedTo);
+  if (query.unassigned)    params.set("unassigned",    query.unassigned);
+  if (query.createdAfter)  params.set("createdAfter",  query.createdAfter);
+  if (query.createdBefore) params.set("createdBefore", query.createdBefore);
   return get(`/leads?${params.toString()}`);
 }
 
@@ -349,9 +823,38 @@ export async function requestRevision(id: string, note: string): Promise<ApiAppr
 
 // ─── Invoices & Payments ──────────────────────────────────────
 
-export async function fetchInvoices(clientId?: string): Promise<{ invoices: ApiInvoice[]; total: number }> {
-  const qs = clientId ? `?clientId=${clientId}` : "";
-  return get(`/invoices${qs}`);
+export interface InvoicesQuery {
+  clientId?: string;
+  projectId?: string;
+  invoiceStatus?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export async function fetchInvoices(clientIdOrOpts?: string | InvoicesQuery): Promise<{ invoices: ApiInvoice[]; total: number }> {
+  const params = new URLSearchParams();
+  if (typeof clientIdOrOpts === "string") {
+    params.set("clientId", clientIdOrOpts);
+  } else if (clientIdOrOpts) {
+    const q = clientIdOrOpts;
+    if (q.clientId)       params.set("clientId",       q.clientId);
+    if (q.projectId)      params.set("projectId",      q.projectId);
+    if (q.invoiceStatus)  params.set("invoiceStatus",  q.invoiceStatus);
+    if (q.page)           params.set("page",           String(q.page));
+    if (q.limit)          params.set("limit",          String(q.limit ?? 20));
+    if (q.search)         params.set("search",         q.search);
+    if (q.dateFrom)       params.set("dateFrom",       q.dateFrom);
+    if (q.dateTo)         params.set("dateTo",         q.dateTo);
+    if (q.sortBy)         params.set("sortBy",         q.sortBy);
+    if (q.sortOrder)      params.set("sortOrder",      q.sortOrder);
+  }
+  const qs = params.toString();
+  return get(`/invoices${qs ? `?${qs}` : ""}`);
 }
 
 export async function fetchPayments(invoiceId?: string): Promise<unknown[]> {
@@ -362,8 +865,19 @@ export async function fetchPayments(invoiceId?: string): Promise<unknown[]> {
 // ─── Users ───────────────────────────────────────────────────
 
 export async function fetchUsers(role?: string): Promise<ApiUser[]> {
-  const qs = role ? `?role=${role}` : "";
-  return get<ApiUser[]>(`/users${qs}`);
+  // Backend exposes role-specific sub-routes rather than a generic ?role= query.
+  // Map the role argument to the correct path and extract the users array.
+  if (role === "employee") {
+    const result = await get<{ users: ApiUser[] }>("/users/employees");
+    return result.users ?? [];
+  }
+  if (role === "client") {
+    const result = await get<{ users: ApiUser[] }>("/users/clients");
+    return result.users ?? [];
+  }
+  // Fallback: try employees list (admin context without role filter)
+  const result = await get<{ users: ApiUser[] }>("/users/employees");
+  return result.users ?? [];
 }
 
 export async function fetchUserById(id: string): Promise<ApiUser> {
@@ -511,3 +1025,250 @@ export const LEAD_STATUS_LABELS: Record<string, string> = {
   lost:      "Lost",
   archived:  "Archived",
 };
+
+// ─── Extended User Types (Batch 1) ────────────────────────────
+
+export interface ApiClientProfile {
+  _id: string;
+  userId: string;
+  organizationName?: string;
+  category?: string;
+  onboardingStatus?: string;
+  serviceName?: string;
+  serviceNotes?: string;
+  workStatus?: string;
+  followUpDate?: string;
+  totalAmount?: number;
+  paidAmount?: number;
+  balanceAmount?: number;
+  paymentStatus?: string;
+  remarks?: string;
+  communicationPreference?: string;
+  createdAt?: string;
+}
+
+export interface ApiEmployeeProfile {
+  _id: string;
+  userId: string;
+  designation: string;
+  department: string;
+  specializations?: string[];
+  assignedRegions?: string[];
+  activeProjectCount?: number;
+  maxProjectCapacity?: number;
+  employmentStatus?: string;
+  joiningDate?: string;
+  employeeCode?: string;
+  workEmail?: string;
+}
+
+export interface ApiUserWithProfile {
+  user: ApiUser & { whatsappNumber?: string; city?: string; address?: string };
+  clientProfile?: ApiClientProfile;
+  employeeProfile?: ApiEmployeeProfile;
+  projects?: ApiProject[];
+}
+
+export interface CreateClientPayload {
+  firstName: string;
+  lastName?: string;
+  email: string;
+  password: string;
+  phone?: string;
+  whatsappNumber?: string;
+  city?: string;
+  address?: string;
+  organizationName?: string;
+  category?: string;
+  serviceName?: string;
+  serviceNotes?: string;
+  workStatus?: string;
+  followUpDate?: string;
+  totalAmount?: number;
+  paidAmount?: number;
+  paymentStatus?: string;
+  remarks?: string;
+}
+
+export interface CreateEmployeePayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone?: string;
+  whatsappNumber?: string;
+  designation: string;
+  department: string;
+  city?: string;
+  address?: string;
+  specializations?: string[];
+  maxProjectCapacity?: number;
+  employeeCode?: string;
+}
+
+// ─── Extended User API (Batch 1) ──────────────────────────────
+
+export async function fetchClientsEnhanced(opts: {
+  page?: number; limit?: number; search?: string; status?: string; payStatus?: string;
+  sortBy?: string; sortOrder?: "asc" | "desc";
+} = {}): Promise<{ users: ApiUserWithProfile[]; meta: { total: number; page: number; limit: number; pages: number } }> {
+  const q = new URLSearchParams();
+  if (opts.page)       q.set("page",       String(opts.page));
+  if (opts.limit)      q.set("limit",      String(opts.limit ?? 20));
+  if (opts.search)     q.set("search",     opts.search);
+  if (opts.status)     q.set("status",     opts.status);
+  if (opts.payStatus)  q.set("payStatus",  opts.payStatus);
+  if (opts.sortBy)     q.set("sortBy",     opts.sortBy);
+  if (opts.sortOrder)  q.set("sortOrder",  opts.sortOrder);
+  const result = await get<{ users: ApiUserWithProfile[]; meta: { total: number; page: number; limit: number; pages: number } }>(`/users/clients?${q}`);
+  return result;
+}
+
+export async function fetchEmployeesEnhanced(opts: {
+  page?: number; limit?: number; search?: string; status?: string; department?: string;
+  sortBy?: string; sortOrder?: "asc" | "desc";
+} = {}): Promise<{ users: ApiUserWithProfile[]; meta: { total: number; page: number; limit: number; pages: number } }> {
+  const q = new URLSearchParams();
+  if (opts.page)       q.set("page",       String(opts.page));
+  if (opts.limit)      q.set("limit",      String(opts.limit ?? 20));
+  if (opts.search)     q.set("search",     opts.search);
+  if (opts.status)     q.set("status",     opts.status);
+  if (opts.department) q.set("department", opts.department);
+  if (opts.sortBy)     q.set("sortBy",     opts.sortBy);
+  if (opts.sortOrder)  q.set("sortOrder",  opts.sortOrder);
+  const result = await get<{ users: ApiUserWithProfile[]; meta: { total: number; page: number; limit: number; pages: number } }>(`/users/employees?${q}`);
+  return result;
+}
+
+export async function fetchClientDetail(id: string): Promise<ApiUserWithProfile> {
+  return get<ApiUserWithProfile>(`/users/clients/${id}`);
+}
+
+export async function fetchEmployeeDetail(id: string): Promise<ApiUserWithProfile> {
+  return get<ApiUserWithProfile>(`/users/employees/${id}`);
+}
+
+export async function createClient(data: CreateClientPayload): Promise<ApiUserWithProfile> {
+  return post<ApiUserWithProfile>("/users/clients", data);
+}
+
+export async function createEmployeeEnhanced(data: CreateEmployeePayload): Promise<ApiUserWithProfile> {
+  return post<ApiUserWithProfile>("/users/employees", data);
+}
+
+export async function updateClient(id: string, data: Partial<CreateClientPayload>): Promise<ApiUserWithProfile> {
+  return patch<ApiUserWithProfile>(`/users/clients/${id}`, data);
+}
+
+export async function updateEmployee(id: string, data: Partial<CreateEmployeePayload>): Promise<ApiUserWithProfile> {
+  return patch<ApiUserWithProfile>(`/users/employees/${id}`, data);
+}
+
+export async function deactivateClient(id: string): Promise<void> {
+  await patch(`/users/clients/${id}/deactivate`, {});
+}
+
+export async function reactivateClient(id: string): Promise<void> {
+  await patch(`/users/clients/${id}/reactivate`, {});
+}
+
+export async function archiveClient(id: string): Promise<void> {
+  await del(`/users/clients/${id}`);
+}
+
+export async function deactivateEmployeeById(id: string): Promise<void> {
+  await patch(`/users/employees/${id}/deactivate`, {});
+}
+
+export async function reactivateEmployee(id: string): Promise<void> {
+  await patch(`/users/employees/${id}/reactivate`, {});
+}
+
+export async function archiveEmployee(id: string): Promise<void> {
+  await del(`/users/employees/${id}`);
+}
+
+// ─── Follow-Up Center (Batch 2) ───────────────────────────────
+
+export interface ApiFollowUp {
+  _id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  organisationName?: string;
+  status: string;
+  priority: string;
+  followUpDate: string;
+  lastContactedAt?: string;
+  internalNotes?: string;
+  notes?: string;
+}
+
+export type FollowUpBucket = 'all' | 'today' | 'overdue' | 'upcoming';
+
+export interface FollowUpsQuery {
+  bucket?: FollowUpBucket;
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export async function fetchFollowUps(query: FollowUpsQuery = {}): Promise<{
+  followUps: ApiFollowUp[];
+  total: number;
+  meta: { page: number; limit: number; pages: number };
+}> {
+  const q = new URLSearchParams();
+  if (query.bucket) q.set('bucket', query.bucket);
+  if (query.page)   q.set('page',   String(query.page));
+  if (query.limit)  q.set('limit',  String(query.limit ?? 20));
+  if (query.search) q.set('search', query.search);
+  return get(`/followups?${q}`);
+}
+
+export async function fetchFollowUpCounts(): Promise<FollowUpCounts> {
+  return get<FollowUpCounts>('/followups/counts');
+}
+
+export async function snoozeFollowUp(id: string, days = 1): Promise<{ newFollowUpDate: string }> {
+  return patch(`/followups/${id}/snooze`, { days });
+}
+
+export async function markFollowUpDone(id: string, note?: string): Promise<void> {
+  await patch(`/followups/${id}/done`, { note });
+}
+
+export async function updateLeadFollowUpDate(id: string, followUpDate: string): Promise<ApiLead> {
+  return patch<ApiLead>(`/leads/${id}`, { followUpDate });
+}
+
+
+// ─── Excel Export Helpers ─────────────────────────────────────────────────────
+
+import { downloadBlob } from "@/lib/api";
+
+export interface CrmExportFilters {
+  search?:        string;
+  status?:        string;
+  assignedTo?:    string;
+  dateFrom?:      string;
+  dateTo?:        string;
+  paymentStatus?: string;
+  priority?:      string;
+}
+
+function buildExportUrl(target: string, filters: CrmExportFilters = {}): string {
+  const q = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => { if (v) q.set(k, v); });
+  const qs = q.toString();
+  return `/api/v1/exports/excel/${target}${qs ? `?${qs}` : ""}`;
+}
+
+export async function exportClients(filters?: CrmExportFilters):   Promise<void> { await downloadBlob(buildExportUrl("clients",          filters), "clients-export.xlsx"); }
+export async function exportEmployees(filters?: CrmExportFilters): Promise<void> { await downloadBlob(buildExportUrl("employees",        filters), "employees-export.xlsx"); }
+export async function exportProjects(filters?: CrmExportFilters):  Promise<void> { await downloadBlob(buildExportUrl("projects",         filters), "projects-export.xlsx"); }
+export async function exportPayments(filters?: CrmExportFilters):  Promise<void> { await downloadBlob(buildExportUrl("payments",         filters), "payments-export.xlsx"); }
+export async function exportLeads(filters?: CrmExportFilters):     Promise<void> { await downloadBlob(buildExportUrl("leads",            filters), "leads-export.xlsx"); }
+export async function exportSupport(filters?: CrmExportFilters):   Promise<void> { await downloadBlob(buildExportUrl("support",          filters), "support-export.xlsx"); }
+export async function exportFollowups():                           Promise<void> { await downloadBlob(buildExportUrl("followups"),                 "followups-export.xlsx"); }
+export async function exportDashboardReport():                     Promise<void> { await downloadBlob(buildExportUrl("dashboard_report"),          "crm-summary-report.xlsx"); }

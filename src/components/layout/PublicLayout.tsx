@@ -25,7 +25,7 @@ export default function PublicLayout({ children, hideStickyBar = false }: Public
       className="min-h-screen flex flex-col"
     >
       <Navbar />
-      <main role="main" className="flex-1">
+      <main id="main-content" role="main" className="flex-1">
         {children}
       </main>
       <Footer />

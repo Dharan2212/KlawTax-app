@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
 import { staggerContainer, staggerItem } from "@/lib/motion";
+import { COMPLETE_PACKAGE } from "@/lib/services";
 
 export default function CTABanner() {
   return (
@@ -55,7 +56,7 @@ export default function CTABanner() {
             color: "rgba(255,255,255,0.60)",
           }}
         >
-          Start with just ₹6,750 advance. Our experts handle everything —
+          Start with just ₹{COMPLETE_PACKAGE.advancePrice.toLocaleString("en-IN")} advance. Our experts handle everything —
           from incorporation to compliance.
         </motion.p>
 

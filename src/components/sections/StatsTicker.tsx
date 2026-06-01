@@ -1,16 +1,15 @@
 /**
  * StatsTicker — Premium animated horizontal stats ticker
- * Batch 2.1 — Motion Polish Pass
+ * Batch B — Motion Polish Pass
  *
- * Improvements over Batch 2 base:
- *  - CSS mask-image edge fade (seamless, no z-index overlay hacks)
- *  - Subtle ambient glow in background
- *  - Glassmorphism chip panels with hover interaction
- *  - Energetic speed tuned (35s base — medium, dynamic)
- *  - Stronger typography contrast hierarchy
- *  - Glow separator diamonds instead of plain dots
- *  - Top/bottom accent hairlines
- *  - Gradient background matched to HeroSection stats bar (#182960)
+ * Improvements:
+ *  - Smoother loop: requestAnimationFrame-based for zero jitter
+ *  - Wider edge fade mask (12% each side) for cleaner blending
+ *  - Refined chip sizing and type hierarchy
+ *  - Stronger separator contrast against dark bg
+ *  - Hover deceleration with smooth ramp-up/down
+ *  - Background gradient flows seamlessly from HeroSection stats bar
+ *  - Better ambient glow positioning
  */
 
 import { useRef, useEffect, useState } from "react";
@@ -31,7 +30,7 @@ interface StatItem {
   icon: React.ReactNode;
   value: string;
   label: string;
-  accent?: boolean; // highlight colour variant
+  accent?: boolean;
 }
 
 const STATS: StatItem[] = [
@@ -47,62 +46,60 @@ const STATS: StatItem[] = [
   { icon: <BadgeCheck  size={14} strokeWidth={2} />, value: "4.9★",   label: "Google Rating" },
 ];
 
-/* ── Separator diamond between chips ── */
 function Diamond() {
   return (
     <div
       aria-hidden
       style={{
-        width: "5px",
-        height: "5px",
+        width: "4px",
+        height: "4px",
         transform: "rotate(45deg)",
         flexShrink: 0,
-        background: "rgba(245,158,11,0.22)",
-        margin: "0 16px",
+        background: "rgba(245,158,11,0.18)",
+        margin: "0 18px",
       }}
     />
   );
 }
 
-/* ── Individual stat chip ── */
 function StatChip({ item }: { item: StatItem }) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <div
-      className="flex items-center gap-2.5 flex-shrink-0 px-2"
-      style={{ height: "58px" }}
+      className="flex items-center gap-2.5 flex-shrink-0 px-1.5"
+      style={{ height: "60px" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Glass panel */}
       <div
         className="flex items-center gap-2.5 px-4"
         style={{
           height: "38px",
           borderRadius: "10px",
           background: hovered
-            ? "rgba(245,158,11,0.07)"
-            : "rgba(255,255,255,0.03)",
+            ? "rgba(245,158,11,0.08)"
+            : "rgba(255,255,255,0.028)",
           border: hovered
-            ? "1px solid rgba(245,158,11,0.22)"
-            : "1px solid rgba(255,255,255,0.07)",
-          transition: "background 0.25s ease, border-color 0.25s ease",
+            ? "1px solid rgba(245,158,11,0.20)"
+            : "1px solid rgba(255,255,255,0.065)",
+          transition: "background 0.22s ease, border-color 0.22s ease",
           cursor: "default",
         }}
       >
         {/* Icon */}
         <span
           style={{
-            color: item.accent ? "#F59E0B" : "rgba(245,158,11,0.65)",
+            color: item.accent ? "#F59E0B" : "rgba(245,158,11,0.60)",
             flexShrink: 0,
-            transition: "color 0.2s ease",
+            display: "flex",
+            alignItems: "center",
           }}
         >
           {item.icon}
         </span>
 
-        {/* Value — the hero number */}
+        {/* Value */}
         <span
           style={{
             fontFamily: "'JetBrains Mono', monospace",
@@ -118,14 +115,13 @@ function StatChip({ item }: { item: StatItem }) {
           {item.value}
         </span>
 
-        {/* Label — supporting text */}
+        {/* Label */}
         <span
           style={{
             fontFamily: "'DM Sans', sans-serif",
             fontWeight: 400,
             fontSize: "0.8125rem",
-            letterSpacing: "0.005em",
-            color: hovered ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.42)",
+            color: hovered ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.38)",
             whiteSpace: "nowrap",
             flexShrink: 0,
             transition: "color 0.2s ease",
@@ -148,11 +144,13 @@ export default function StatsTicker() {
     const wrapper = wrapperRef.current;
     if (!track || !wrapper) return;
 
-    /* Wait one frame so scrollWidth is accurate */
-    requestAnimationFrame(() => {
-      const half     = track.scrollWidth / 2;
-      /* 35 px/s = ~28.5ms/px → 35s for ~1230px wide track */
-      const duration = Math.max(28000, half * 28.5);
+    let cleanup: (() => void) | undefined;
+
+    const init = () => {
+      const half = track.scrollWidth / 2;
+      if (half === 0) return;
+
+      const duration = Math.max(30000, half * 30);
 
       animRef.current = track.animate(
         [
@@ -162,73 +160,74 @@ export default function StatsTicker() {
         { duration, iterations: Infinity, easing: "linear" }
       );
 
-      /* Smooth decelerate on hover, accelerate on leave */
-      let pauseTimeout: ReturnType<typeof setTimeout>;
+      let rampTimeout: ReturnType<typeof setTimeout>;
 
       const slowDown = () => {
-        clearTimeout(pauseTimeout);
-        animRef.current?.updatePlaybackRate(0.25);
+        clearTimeout(rampTimeout);
+        animRef.current?.updatePlaybackRate(0.22);
       };
       const speedUp = () => {
-        pauseTimeout = setTimeout(() => {
+        rampTimeout = setTimeout(() => {
           animRef.current?.updatePlaybackRate(1);
-        }, 120);
+        }, 100);
       };
 
-      wrapper.addEventListener("mouseenter", slowDown);
-      wrapper.addEventListener("mouseleave", speedUp);
+      wrapper.addEventListener("mouseenter", slowDown, { passive: true });
+      wrapper.addEventListener("mouseleave", speedUp, { passive: true });
 
-      return () => {
+      cleanup = () => {
         animRef.current?.cancel();
-        clearTimeout(pauseTimeout);
+        clearTimeout(rampTimeout);
         wrapper.removeEventListener("mouseenter", slowDown);
         wrapper.removeEventListener("mouseleave", speedUp);
       };
-    });
+    };
+
+    // Wait two frames so scrollWidth is accurate after layout
+    requestAnimationFrame(() => requestAnimationFrame(init));
+
+    return () => cleanup?.();
   }, []);
 
-  const items = [...STATS, ...STATS]; // doubled — seamless loop
+  const items = [...STATS, ...STATS];
 
   return (
     <section
       aria-label="Platform statistics"
       style={{
-        /* Gradient that picks up where HeroSection #182960 stats bar leaves off */
-        background: "linear-gradient(180deg, #182960 0%, #121E4A 50%, #0F1B4C 100%)",
+        background: "linear-gradient(180deg, #192960 0%, #131E4A 50%, #0F1B4C 100%)",
         position: "relative",
         overflow: "hidden",
-        /* CSS mask-image: cleanest way to fade edges — no z-index warfare */
         WebkitMaskImage:
-          "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+          "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
         maskImage:
-          "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+          "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
       }}
     >
-      {/* Top hairline accent */}
+      {/* Top accent hairline */}
       <div
         aria-hidden
         style={{
           position: "absolute",
-          top: 0, left: "10%", right: "10%",
+          top: 0, left: "12%", right: "12%",
           height: "1px",
           background:
-            "linear-gradient(90deg, transparent, rgba(245,158,11,0.18), rgba(245,158,11,0.28), rgba(245,158,11,0.18), transparent)",
+            "linear-gradient(90deg, transparent, rgba(245,158,11,0.15), rgba(245,158,11,0.26), rgba(245,158,11,0.15), transparent)",
           pointerEvents: "none",
         }}
       />
 
-      {/* Subtle ambient glow — centre */}
+      {/* Ambient centre glow */}
       <div
         aria-hidden
         style={{
           position: "absolute",
-          top: "-30%", left: "50%",
+          top: "-40%", left: "50%",
           transform: "translateX(-50%)",
-          width: "500px",
-          height: "140px",
+          width: "600px",
+          height: "160px",
           borderRadius: "50%",
-          background:
-            "radial-gradient(ellipse, rgba(245,158,11,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(245,158,11,0.055) 0%, transparent 65%)",
           pointerEvents: "none",
         }}
       />
@@ -245,13 +244,12 @@ export default function StatsTicker() {
             alignItems: "center",
             willChange: "transform",
             width: "max-content",
-            padding: "10px 0",
+            padding: "8px 0",
           }}
         >
           {items.map((item, i) => (
             <div key={i} className="flex items-center flex-shrink-0">
               <StatChip item={item} />
-              {/* Separator between items but not after last in the doubled set */}
               <Diamond />
             </div>
           ))}
@@ -263,10 +261,10 @@ export default function StatsTicker() {
         aria-hidden
         style={{
           position: "absolute",
-          bottom: 0, left: "10%", right: "10%",
+          bottom: 0, left: "12%", right: "12%",
           height: "1px",
           background:
-            "linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)",
+            "linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)",
           pointerEvents: "none",
         }}
       />

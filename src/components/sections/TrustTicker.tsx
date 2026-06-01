@@ -1,17 +1,16 @@
 /**
  * TrustTicker — Premium animated organization trust strip
- * Batch 2.1 — Motion Polish Pass
+ * Batch B — Motion Polish Pass
  *
- * Improvements over Batch 2 base:
- *  - CSS mask-image edge fading (seamless)
- *  - Glassmorphism pills with stronger depth treatment
- *  - Purple accent glow in background
- *  - Calmer speed (55s base — confidence-building, not rushed)
- *  - Slow decelerate on hover (not hard pause)
- *  - "Trusted By" label with vertical rule, properly outside the mask
- *  - Subtle purple hairline divider at top
- *  - Better background gradient that flows from StatsTicker
- *  - Hover: pill brightens, icon glows purple
+ * Improvements:
+ *  - Two-frame RAF init for accurate scrollWidth measurement
+ *  - Wider edge fade on masked scrolling region
+ *  - Refined pill sizing — slightly taller for better readability
+ *  - Stronger hover state — pill becomes more visible
+ *  - Spacer dots improved contrast
+ *  - Background gradient flows cleanly from StatsTicker
+ *  - "Trusted By" label better proportioned
+ *  - Smooth playback rate ramp (no abrupt speed jump)
  */
 
 import { useRef, useEffect, useState } from "react";
@@ -51,8 +50,8 @@ function OrgPill({ org }: { org: OrgItem }) {
 
   return (
     <div
-      className="flex items-center flex-shrink-0 px-3"
-      style={{ height: "44px" }}
+      className="flex items-center flex-shrink-0 px-2"
+      style={{ height: "46px" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -63,23 +62,22 @@ function OrgPill({ org }: { org: OrgItem }) {
           borderRadius: "999px",
           background: hovered
             ? "rgba(124,58,237,0.10)"
-            : "rgba(255,255,255,0.035)",
+            : "rgba(255,255,255,0.030)",
           border: hovered
-            ? "1px solid rgba(124,58,237,0.30)"
-            : "1px solid rgba(255,255,255,0.08)",
+            ? "1px solid rgba(124,58,237,0.28)"
+            : "1px solid rgba(255,255,255,0.075)",
           boxShadow: hovered
-            ? "0 0 12px rgba(124,58,237,0.12), inset 0 1px 0 rgba(255,255,255,0.05)"
-            : "inset 0 1px 0 rgba(255,255,255,0.04)",
+            ? "0 0 14px rgba(124,58,237,0.10), inset 0 1px 0 rgba(255,255,255,0.05)"
+            : "none",
           transition:
-            "background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
+            "background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease",
           cursor: "default",
           whiteSpace: "nowrap",
         }}
       >
-        {/* Icon */}
         <span
           style={{
-            color: hovered ? "#A78BFA" : "rgba(124,58,237,0.70)",
+            color: hovered ? "#A78BFA" : "rgba(124,58,237,0.65)",
             flexShrink: 0,
             transition: "color 0.2s ease",
             display: "flex",
@@ -89,14 +87,13 @@ function OrgPill({ org }: { org: OrgItem }) {
           {org.icon}
         </span>
 
-        {/* Category */}
         <span
           style={{
             fontFamily: "'DM Sans', sans-serif",
             fontWeight: 500,
             fontSize: "0.6875rem",
             letterSpacing: "0.01em",
-            color: hovered ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.45)",
+            color: hovered ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.40)",
             transition: "color 0.2s ease",
           }}
         >
@@ -107,17 +104,17 @@ function OrgPill({ org }: { org: OrgItem }) {
   );
 }
 
-/* ── Spacer between pills ── */
-function Spacer() {
+function Dot() {
   return (
     <div
       aria-hidden
       style={{
-        width: "1px",
-        height: "12px",
-        background: "rgba(124,58,237,0.12)",
+        width: "3px",
+        height: "3px",
+        borderRadius: "50%",
+        background: "rgba(124,58,237,0.16)",
         flexShrink: 0,
-        margin: "0 4px",
+        margin: "0 6px",
       }}
     />
   );
@@ -133,10 +130,13 @@ export default function TrustTicker() {
     const wrapper = wrapperRef.current;
     if (!track || !wrapper) return;
 
-    requestAnimationFrame(() => {
+    let cleanup: (() => void) | undefined;
+
+    const init = () => {
       const half = track.scrollWidth / 2;
-      /* 55s feel — calm, confidence-building; slower than StatsTicker */
-      const duration = Math.max(42000, half * 42);
+      if (half === 0) return;
+
+      const duration = Math.max(40000, half * 44);
 
       animRef.current = track.animate(
         [
@@ -146,42 +146,45 @@ export default function TrustTicker() {
         { duration, iterations: Infinity, easing: "linear" }
       );
 
-      let timeout: ReturnType<typeof setTimeout>;
+      let rampTimeout: ReturnType<typeof setTimeout>;
 
       const slowDown = () => {
-        clearTimeout(timeout);
-        animRef.current?.updatePlaybackRate(0.20); // even calmer than stats
+        clearTimeout(rampTimeout);
+        animRef.current?.updatePlaybackRate(0.18);
       };
       const speedUp = () => {
-        timeout = setTimeout(() => {
+        rampTimeout = setTimeout(() => {
           animRef.current?.updatePlaybackRate(1);
-        }, 150);
+        }, 140);
       };
 
-      wrapper.addEventListener("mouseenter", slowDown);
-      wrapper.addEventListener("mouseleave", speedUp);
+      wrapper.addEventListener("mouseenter", slowDown, { passive: true });
+      wrapper.addEventListener("mouseleave", speedUp, { passive: true });
 
-      return () => {
+      cleanup = () => {
         animRef.current?.cancel();
-        clearTimeout(timeout);
+        clearTimeout(rampTimeout);
         wrapper.removeEventListener("mouseenter", slowDown);
         wrapper.removeEventListener("mouseleave", speedUp);
       };
-    });
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(init));
+
+    return () => cleanup?.();
   }, []);
 
-  const items = [...ORGS, ...ORGS]; // doubled for seamless loop
+  const items = [...ORGS, ...ORGS];
 
   return (
     <section
       aria-label="Organization types we serve"
       style={{
-        /* Gradient that flows naturally from StatsTicker's #0F1B4C */
         background: "linear-gradient(180deg, #0D1640 0%, #0A1128 100%)",
         position: "relative",
       }}
     >
-      {/* Purple top accent hairline — visual divider from StatsTicker */}
+      {/* Purple top hairline */}
       <div
         aria-hidden
         style={{
@@ -189,59 +192,57 @@ export default function TrustTicker() {
           top: 0, left: "8%", right: "8%",
           height: "1px",
           background:
-            "linear-gradient(90deg, transparent, rgba(124,58,237,0.20), rgba(124,58,237,0.35), rgba(124,58,237,0.20), transparent)",
+            "linear-gradient(90deg, transparent, rgba(124,58,237,0.18), rgba(124,58,237,0.30), rgba(124,58,237,0.18), transparent)",
           pointerEvents: "none",
         }}
       />
 
-      {/* Subtle purple ambient glow */}
+      {/* Ambient purple glow */}
       <div
         aria-hidden
         style={{
           position: "absolute",
-          top: "-20%", left: "30%",
-          width: "400px",
-          height: "100px",
+          top: "-30%", left: "28%",
+          width: "450px",
+          height: "120px",
           borderRadius: "50%",
-          background:
-            "radial-gradient(ellipse, rgba(124,58,237,0.05) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(124,58,237,0.048) 0%, transparent 65%)",
           pointerEvents: "none",
         }}
       />
 
-      {/* ── Row layout: "Trusted By" label + masked ticker ── */}
+      {/* Row: "Trusted By" label + masked ticker */}
       <div style={{ display: "flex", alignItems: "center" }}>
 
-        {/* "Trusted By" label — sits OUTSIDE the mask region */}
+        {/* Label — outside the mask */}
         <div
           style={{
             flexShrink: 0,
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            padding: "0 20px 0 24px",
+            padding: "0 18px 0 22px",
             zIndex: 3,
           }}
         >
           <span
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: "0.625rem",
+              fontSize: "0.5875rem",
               fontWeight: 700,
-              letterSpacing: "0.10em",
+              letterSpacing: "0.11em",
               textTransform: "uppercase",
-              color: "rgba(124,58,237,0.55)",
+              color: "rgba(124,58,237,0.50)",
               whiteSpace: "nowrap",
             }}
           >
             Trusted By
           </span>
-          {/* Vertical rule separator */}
           <div
             style={{
               width: "1px",
               height: "14px",
-              background: "rgba(124,58,237,0.18)",
+              background: "rgba(124,58,237,0.16)",
               flexShrink: 0,
             }}
           />
@@ -254,9 +255,9 @@ export default function TrustTicker() {
             flex: 1,
             overflow: "hidden",
             WebkitMaskImage:
-              "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
+              "linear-gradient(to right, transparent 0%, black 9%, black 91%, transparent 100%)",
             maskImage:
-              "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
+              "linear-gradient(to right, transparent 0%, black 9%, black 91%, transparent 100%)",
           }}
         >
           <div
@@ -266,20 +267,20 @@ export default function TrustTicker() {
               alignItems: "center",
               willChange: "transform",
               width: "max-content",
-              padding: "7px 0",
+              padding: "6px 0",
             }}
           >
             {items.map((org, i) => (
               <div key={i} className="flex items-center flex-shrink-0">
                 <OrgPill org={org} />
-                <Spacer />
+                <Dot />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Bottom hairline — transition to next section */}
+      {/* Bottom hairline */}
       <div
         aria-hidden
         style={{
@@ -287,7 +288,7 @@ export default function TrustTicker() {
           bottom: 0, left: 0, right: 0,
           height: "1px",
           background:
-            "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)",
+            "linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)",
           pointerEvents: "none",
         }}
       />

@@ -6,13 +6,11 @@ import StickyMobileBar from "@/components/shared/StickyMobileBar";
 import SEO from "@/components/shared/SEO";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { useAuth } from "@/context/AuthContext";
-import { fetchClientDashboard } from "@/lib/crmApi";
 import { formatCurrency } from "@/lib/utils";
-import { useEffect, useState } from "react";
 import {
   ClipboardList, CreditCard, Bell, MessageCircle,
   CheckCircle2, Clock, Phone, Mail, ArrowRight,
-  TrendingUp, AlertCircle, User, Loader2,
+  TrendingUp, AlertCircle, User,
 } from "lucide-react";
 
 const statusSteps = ["payment_confirmed", "documents_received", "processing", "filed", "completed"] as const;
@@ -41,21 +39,12 @@ const sidebarItems = [
 export default function DashboardPage() {
   const { orders, updates, activeSection, setActiveSection } = useDashboardStore();
   const { user } = useAuth();
-  const [liveData, setLiveData]   = useState<{ activeProjects: unknown[]; pendingPayments: unknown[] } | null>(null);
-  const [liveLoading, setLiveLoading] = useState(true);
-
-  useEffect(() => {
-    fetchClientDashboard()
-      .then(data => setLiveData(data as any))
-      .catch(() => { /* fall through to mock */ })
-      .finally(() => setLiveLoading(false));
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <SEO title="My Dashboard | KlawTax" noindex={true} />
       <Navbar />
-      <main role="main" className="pt-28 pb-24">
+      <main id="main-content" role="main" className="pt-28 pb-24">
         <div className="container mx-auto px-4 max-w-6xl">
 
           {/* Page header */}
@@ -231,7 +220,7 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3 mb-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
                         <div className="p-4 rounded-xl bg-muted/60 text-center">
                           <p className="text-xs text-muted-foreground mb-1">Total</p>
                           <p className="font-mono font-bold text-foreground text-sm">{formatCurrency(o.amount)}</p>
