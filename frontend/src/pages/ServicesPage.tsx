@@ -26,7 +26,7 @@ export default function ServicesPage() {
         schema={servicesPageSchema}
       />
       <Navbar />
-      <main role="main" className="flex-1">
+      <main id="main-content" role="main" className="flex-1">
         {/* Hero banner */}
         <section
           className="pt-28 pb-14 md:pt-36 md:pb-16"

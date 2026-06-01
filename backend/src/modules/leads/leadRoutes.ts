@@ -92,7 +92,7 @@ leadRouter.get(
       }
 
       const result = await leadService.listLeads(filter, page, limit, sortBy, sortOrder);
-      sendSuccess(res, result.leads, { meta: result.meta });
+      sendSuccess(res, { leads: result.leads, total: result.meta.total }, { meta: result.meta });
     } catch (err) {
       next(err);
     }

@@ -21,6 +21,7 @@ import { publicServicesRouter } from './routes/publicServices';
 
 // ── CRM — Leads (public form + protected CRM) ───────────────────────────────────
 import { leadRouter, contactRouter } from './modules/leads/leadRoutes';
+import { followUpRouter }            from './modules/leads/followUpRoutes';
 
 // ── User management (Admin CRUD for employees & clients) ────────────────────────
 import { userRouter } from './modules/users/userRoutes';
@@ -53,6 +54,7 @@ import { clientDashboardRouter } from './modules/dashboards/client/clientDashboa
 import { auditRouter }          from './modules/audit/auditRoutes';
 import { adminSettingsRouter }  from './modules/admin/adminSettingsRoutes';
 import { adminJobsRouter }      from './modules/admin/adminJobsRoutes';
+import { adminWebhookRouter }   from './modules/admin/adminWebhookRoutes';
 
 // ─── App Factory ───────────────────────────────────────────────────────────────
 
@@ -183,6 +185,7 @@ export function createApp(): Application {
 
   // Lead management — public contact form endpoint + protected CRM endpoints
   app.use('/api/v1/leads', leadRouter);
+  app.use('/api/v1/followups', followUpRouter);
 
   // User management — Admin CRUD for employee & client accounts
   app.use('/api/v1/users', userRouter);
@@ -234,6 +237,9 @@ export function createApp(): Application {
 
   // Scheduled job registry + failed job log browser — Admin only
   app.use('/api/v1/admin/jobs', adminJobsRouter);
+
+  // Webhook event history + manual retry — Admin only
+  app.use('/api/v1/admin/webhooks', adminWebhookRouter);
 
   // ── 8. 404 Handler ────────────────────────────────────────────────────────
   app.use(notFoundHandler);

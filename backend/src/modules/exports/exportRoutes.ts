@@ -1,9 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, getAuthContext } from '../../middlewares/auth';
+import { requireAdmin } from '../../middlewares/rbac';
 import { sendSuccess } from '../../utils/response';
 import { ExportService } from './exportService';
 import { ExportJobType, ExportJobStatus } from '../../models/enums';
 import { AppError } from '../../middlewares/errorHandler';
+import { buildWorkbook, ExportSheetTarget } from './workbookService';
 import { z } from 'zod';
 
 export const exportRouter = Router();
@@ -33,6 +35,49 @@ exportRouter.post(
       const job = await ExportService.requestExport(parsed.data, auth.userId, auth.role);
 
       sendSuccess(res, job, { statusCode: 202, message: 'Export job queued' });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /exports/excel/:target — Direct authenticated XLSX download ──────────
+// Must be placed BEFORE /:id to avoid route shadowing
+
+const VALID_TARGETS: ExportSheetTarget[] = [
+  'clients', 'employees', 'projects', 'payments',
+  'followups', 'leads', 'support', 'dashboard_report',
+];
+
+exportRouter.get(
+  '/excel/:target',
+  requireAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const target = req.params.target as ExportSheetTarget;
+
+      if (!VALID_TARGETS.includes(target)) {
+        throw new AppError(`Invalid export target: ${target}`, 400);
+      }
+
+      // Extract filter params from query string
+      const {
+        search, status, assignedTo, dateFrom, dateTo,
+        paymentStatus, priority,
+      } = req.query as Record<string, string | undefined>;
+
+      const { buffer, filename } = await buildWorkbook({
+        target,
+        filters: { search, status, assignedTo, dateFrom, dateTo, paymentStatus, priority },
+      });
+
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.end(buffer);
     } catch (err) {
       next(err);
     }

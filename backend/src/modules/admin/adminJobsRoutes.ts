@@ -20,6 +20,7 @@ import { sendSuccess, parsePagination, buildPaginationMeta } from '../../utils/r
 import { NotFoundError, ValidationError } from '../../middlewares/errorHandler';
 import { ScheduledJob }  from '../../models/scheduledJob';
 import { FailedJobLog }  from '../../models/failedJobLog';
+import { triggerJobManually } from '../../jobs/scheduler';
 import { logger }        from '../../utils/logger';
 
 export const adminJobsRouter = Router();
@@ -73,6 +74,41 @@ adminJobsRouter.patch(
       });
 
       sendSuccess(res, { job }, { message: `Job '${job.jobName}' ${enabled ? 'enabled' : 'disabled'}` });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/admin/jobs/:jobName/trigger
+ * Manually trigger a registered scheduled job immediately.
+ * Useful for on-demand execution and operational testing.
+ */
+adminJobsRouter.post(
+  '/:jobName/trigger',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { jobName } = req.params;
+      const auth = getAuthContext(req);
+
+      logger.info('[AdminJobs] Manual job trigger requested', {
+        jobName,
+        triggeredBy: auth.userId,
+      });
+
+      const result = await triggerJobManually(jobName);
+
+      if (!result.triggered) {
+        // Job not found in registry — return 404-like
+        throw new NotFoundError(result.error ?? `Scheduled job '${jobName}'`);
+      }
+
+      sendSuccess(
+        res,
+        { jobName, triggered: true },
+        { message: `Job '${jobName}' triggered successfully` }
+      );
     } catch (err) {
       next(err);
     }

@@ -62,7 +62,7 @@ supportRouter.get(
         auth.role
       );
 
-      sendSuccess(res, tickets, { meta });
+      sendSuccess(res, { tickets, total: meta.total }, { meta });
     } catch (err) {
       next(err);
     }

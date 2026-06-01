@@ -8,6 +8,10 @@ import {
 } from '../../models/notificationEnums';
 import { parsePagination, buildPaginationMeta, PaginationMeta } from '../../utils/response';
 import { logger } from '../../utils/logger';
+import {
+  getOrSetNotificationCount,
+  invalidateNotificationCount,
+} from '../../utils/cache/index';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
@@ -99,6 +103,10 @@ export class NotificationService {
       type: dto.notificationType,
     });
 
+    // Invalidate the cached unread count so the next poll reflects the new notification
+    invalidateNotificationCount(dto.recipientId.toString()).catch(() => {});
+    invalidateNotificationCount(`${dto.recipientId.toString()}:client`).catch(() => {});
+
     return doc;
   }
 
@@ -156,7 +164,14 @@ export class NotificationService {
       filter.visibleToClient = true;
     }
 
-    return Notification.countDocuments(filter);
+    // Use cache for the hot path (polled every 30s by all connected users)
+    const cacheKey = options.clientSafeOnly
+      ? `notif:count:${recipientId}:client`
+      : `notif:count:${recipientId}`;
+
+    return getOrSetNotificationCount(cacheKey, () =>
+      Notification.countDocuments(filter) as unknown as Promise<number>
+    );
   }
 
   /** Mark a single notification as read. */
@@ -170,6 +185,10 @@ export class NotificationService {
       { $set: { isRead: true, readAt: new Date() } }
     );
 
+    if (result.modifiedCount > 0) {
+      invalidateNotificationCount(recipientId).catch(() => {});
+      invalidateNotificationCount(`${recipientId}:client`).catch(() => {});
+    }
     return result.modifiedCount > 0;
   }
 
@@ -190,6 +209,10 @@ export class NotificationService {
       $set: { isRead: true, readAt: new Date() },
     });
 
+    if (result.modifiedCount > 0) {
+      invalidateNotificationCount(recipientId).catch(() => {});
+      invalidateNotificationCount(`${recipientId}:client`).catch(() => {});
+    }
     return result.modifiedCount;
   }
 
@@ -203,6 +226,10 @@ export class NotificationService {
       { $set: { isDismissed: true, dismissedAt: new Date(), isRead: true, readAt: new Date() } }
     );
 
+    if (result.modifiedCount > 0) {
+      invalidateNotificationCount(recipientId).catch(() => {});
+      invalidateNotificationCount(`${recipientId}:client`).catch(() => {});
+    }
     return result.modifiedCount > 0;
   }
 
@@ -216,6 +243,10 @@ export class NotificationService {
       { $set: { isDismissed: true, dismissedAt: new Date() } }
     );
 
+    if (result.modifiedCount > 0) {
+      invalidateNotificationCount(recipientId).catch(() => {});
+      invalidateNotificationCount(`${recipientId}:client`).catch(() => {});
+    }
     return result.modifiedCount;
   }
 

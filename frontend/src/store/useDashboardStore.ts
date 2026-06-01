@@ -1,3 +1,20 @@
+/**
+ * useDashboardStore — Client portal UI state
+ *
+ * SCOPE: This store is used by the public client portal at /dashboard
+ * (DashboardPage.tsx). It manages:
+ *   - activeSection    (which sidebar tab is selected)
+ *   - orders / updates (placeholder UI data for the pre-login demo view)
+ *
+ * IMPORTANT: The `orders` and `updates` arrays are intentional placeholder
+ * data for the /dashboard route, which is accessible before CRM auth.
+ * Authenticated clients in the CRM (/crm/client) use live API data via
+ * fetchClientDashboard() in ClientDashboard.tsx — this store is NOT used there.
+ *
+ * Phase 2: Replace placeholder data here with a live fetch from
+ * fetchClientDashboard() after the client logs in on the /dashboard route.
+ */
+
 import { create } from "zustand";
 
 interface Order {
@@ -25,6 +42,8 @@ interface DashboardState {
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
+  // Placeholder data — represents a typical client's in-progress order.
+  // Replace with live API data in Phase 2 once /dashboard requires auth.
   orders: [
     { id: "KT-ABC123", service: "Section 8 NGO Complete Package", status: "processing", date: "2026-04-28", amount: 13500, paidAmount: 6750, pendingAmount: 6750 },
     { id: "KT-DEF456", service: "12A + 80G Registration", status: "documents_received", date: "2026-05-01", amount: 3000, paidAmount: 3000, pendingAmount: 0 },

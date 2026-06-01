@@ -21,6 +21,7 @@ import { SystemSetting } from '../../models/systemSetting';
 import { AuditService }  from '../audit/auditService';
 import { AuditAction, AuditCategory, AuditSource } from '../../models/auditLogEnums';
 import { logger }        from '../../utils/logger';
+import { invalidateSystemSettings } from '../../utils/cache/index';
 
 export const adminSettingsRouter = Router();
 
@@ -87,6 +88,7 @@ adminSettingsRouter.patch(
       existing.lastUpdatedById = new Types.ObjectId(auth.userId);
       await existing.save();
 
+      invalidateSystemSettings().catch(() => {}); // invalidate Redis system:settings cache
       await AuditService.log({
         actorUserId: auth.userId,
         actorRole: auth.role,

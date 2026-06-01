@@ -14,6 +14,7 @@ import {
   guestVerifyPayment,
 } from './checkoutService';
 import { PaymentStatus } from '../../models/invoiceEnums';
+import { invalidateAdminDashboard } from '../../utils/cache/index';
 
 export const paymentRouter = Router();
 
@@ -124,6 +125,9 @@ paymentRouter.post('/verify', authenticate, async (req, res, next) => {
       invoiceStatus: result.invoiceStatus,
       redirectUrl:   result.redirectUrl,
     }, { message: 'Payment verified successfully' });
+
+    // Invalidate admin dashboard — revenue/payment aggregates have changed
+    invalidateAdminDashboard().catch(() => {});
   } catch (err) { next(err); }
 });
 

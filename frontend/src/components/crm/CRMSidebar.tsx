@@ -15,9 +15,10 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Users, FolderKanban, CheckSquare,
   CreditCard, BarChart3, FileText, Send, Home, X,
-  Scale, Download, HelpCircle, FolderOpen, Briefcase,
+  Scale, Download, HelpCircle, FolderOpen, Briefcase, Bell,
+  UserRound, Headphones,
 } from "lucide-react";
-import { fetchUnreadCount, fetchApprovals } from "@/lib/crmApi";
+import { fetchUnreadCount, fetchApprovals, fetchFollowUpCounts } from "@/lib/crmApi";
 
 interface MenuItem { label: string; icon: ReactNode; path: string; }
 interface SidebarProps { mobileOpen?: boolean; onMobileClose?: () => void; }
@@ -26,9 +27,13 @@ const roleMenus: Record<CRMRole, MenuItem[]> = {
   admin: [
     { label: "Dashboard",  icon: <LayoutDashboard size={16} strokeWidth={2} />, path: "/crm/admin" },
     { label: "Clients",    icon: <Users size={16} strokeWidth={2} />,           path: "/crm/admin/clients" },
+    { label: "Employees",  icon: <Briefcase size={16} strokeWidth={2} />,       path: "/crm/admin/employees" },
+    { label: "Leads",      icon: <UserRound size={16} strokeWidth={2} />,       path: "/crm/admin/leads" },
     { label: "Projects",   icon: <FolderKanban size={16} strokeWidth={2} />,    path: "/crm/admin/projects" },
     { label: "Approvals",  icon: <CheckSquare size={16} strokeWidth={2} />,     path: "/crm/admin/approvals" },
     { label: "Payments",   icon: <CreditCard size={16} strokeWidth={2} />,      path: "/crm/admin/payments" },
+    { label: "Support",    icon: <Headphones size={16} strokeWidth={2} />,      path: "/crm/admin/support" },
+    { label: "Follow-ups", icon: <Bell size={16} strokeWidth={2} />,             path: "/crm/admin/followups" },
     { label: "Reports",    icon: <BarChart3 size={16} strokeWidth={2} />,       path: "/crm/admin/reports" },
   ],
   employee: [
@@ -60,14 +65,19 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const accent      = ROLE_ACCENT[currentRole];
 
   // Live badge counts
-  const [pendingApprovals, setPendingApprovals] = useState(0);
-  const [unreadNotifs, setUnreadNotifs]         = useState(0);
+  const [pendingApprovals,  setPendingApprovals]  = useState(0);
+  const [unreadNotifs,      setUnreadNotifs]       = useState(0);
+  const [overdueFollowUps,  setOverdueFollowUps]  = useState(0);
+  const [todayFollowUps,    setTodayFollowUps]    = useState(0);
 
   useEffect(() => {
     let mounted = true;
     if (currentRole === "admin") {
       fetchApprovals("pending")
         .then((r) => { if (mounted) setPendingApprovals(r.approvals?.length ?? 0); })
+        .catch(() => {});
+      fetchFollowUpCounts()
+        .then((c) => { if (mounted) { setOverdueFollowUps(c.overdue); setTodayFollowUps(c.today); } })
         .catch(() => {});
     }
     fetchUnreadCount()
@@ -77,7 +87,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   }, [currentRole]);
 
   const BADGE_MAP: Record<string, { count: number; color: string }> = {
-    "/crm/admin/approvals": { count: pendingApprovals, color: "#D97706" },
+    "/crm/admin/approvals": { count: pendingApprovals,                    color: "#D97706" },
+    "/crm/admin/followups": { count: overdueFollowUps + todayFollowUps,  color: "#DC2626" },
   };
 
   const userName = authUser
@@ -158,6 +169,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
             return (
               <Link key={item.path} to={item.path} onClick={onClose}
+                aria-current={isActive ? "page" : undefined}
                 className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150")}
                 style={{ fontFamily: "'DM Sans', sans-serif", background: isActive ? accent.activeBg : "transparent", color: isActive ? accent.active : "hsl(215 16% 55%)" }}
                 onMouseEnter={(e) => { if (!isActive) { const el = e.currentTarget as HTMLElement; el.style.background = "hsl(215 25% 18%)"; el.style.color = "hsl(0 0% 88%)"; } }}

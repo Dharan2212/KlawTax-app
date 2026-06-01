@@ -207,7 +207,7 @@ export default function ApprovalQueue() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {[
           { label: "Pending",  count: approvals.length,                                color: "#B45309", bg: "rgba(217,119,6,0.08)"   },
           { label: "Approved", count: history.filter((a) => a.status === "approved").length, color: "#15803D", bg: "rgba(22,163,74,0.08)"   },

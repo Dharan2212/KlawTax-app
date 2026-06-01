@@ -3,6 +3,7 @@ import {
   Phone, Mail, Clock, MapPin, MessageCircle,
   Scale, ShieldCheck, BadgeCheck, Star, ArrowRight, ExternalLink,
 } from "lucide-react";
+import { COMPLETE_PACKAGE } from "@/lib/services";
 
 const WA_LINK = "https://wa.me/917387731313";
 const WA_LINK_GENERAL = `${WA_LINK}?text=Hi%20KlawTax!%20I%27d%20like%20to%20know%20more%20about%20your%20services.`;
@@ -30,6 +31,7 @@ const footerLinks = {
     { label: "About Us",         href: "/about"    },
     { label: "All Services",     href: "/services"  },
     { label: "Pricing",          href: "/pricing"   },
+    { label: "Blog & Guides",    href: "/blogs"     },
     { label: "Contact",          href: "/contact"   },
     { label: "Support",          href: "/support"   },
     { label: "Privacy Policy",   href: "/privacy"   },
@@ -57,6 +59,7 @@ const contactItems: { icon: typeof Phone; text: string; href: string | null; ext
 export default function Footer() {
   return (
     <footer
+      role="contentinfo"
       style={{
         background: "linear-gradient(180deg, #0F1B4C 0%, #070D26 100%)",
         borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -69,7 +72,7 @@ export default function Footer() {
           borderBottom: "1px solid rgba(255,255,255,0.07)",
         }}
       >
-        <div className="container mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="container mx-auto px-4 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
@@ -79,7 +82,7 @@ export default function Footer() {
           >
             Ready to register your NGO?{" "}
             <span style={{ color: "#FCD34D", fontWeight: 600 }}>
-              Start with just ₹6,750 advance.
+              Start with just ₹{COMPLETE_PACKAGE.advancePrice.toLocaleString("en-IN")} advance.
             </span>
           </p>
           <a
@@ -100,8 +103,8 @@ export default function Footer() {
       </div>
 
       {/* ── Main grid ─────────────────────────────────────── */}
-      <div className="container mx-auto px-4 pt-14 pb-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-10 mb-12">
+      <div className="container mx-auto px-4 pt-10 sm:pt-14 pb-8 sm:pb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 sm:gap-10 mb-10 sm:mb-12">
 
           {/* Brand + contact */}
           <div className="lg:col-span-2">

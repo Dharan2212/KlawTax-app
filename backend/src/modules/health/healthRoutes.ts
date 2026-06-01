@@ -19,6 +19,9 @@ import { getSecurityEventSummary } from '../../utils/securityMonitoring/security
 import { authenticate } from '../../middlewares/auth';
 import { allowRoles } from '../../middlewares/rbac';
 import { Role } from '../../utils/permissions';
+import { cache } from '../../utils/cache';
+import { getRateLimitStoreSize } from '../../middlewares/rateLimit';
+import { getSchedulerStatus } from '../../jobs/scheduler';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +45,7 @@ interface DiagnosticsResponse {
     cache: ServiceCheck;
     storage: ServiceCheck;
     email: ServiceCheck;
+    scheduler: ServiceCheck;
   };
   memory: {
     heapUsedMb: number;
@@ -49,6 +53,7 @@ interface DiagnosticsResponse {
     rssMb: number;
     externalMb: number;
   };
+  rateLimitStoreSize: number;
   security: ReturnType<typeof getSecurityEventSummary>;
   metrics: ReturnType<typeof collectMetrics>;
 }
@@ -59,11 +64,30 @@ function getDatabaseCheck(): ServiceCheck {
   return { status: getDatabaseHealthStatus() };
 }
 
-function getCacheCheck(): ServiceCheck {
-  if (!getConfig().REDIS_URL) {
-    return { status: 'not_configured', detail: 'REDIS_URL not set — using in-memory cache' };
+async function getCacheCheck(): Promise<ServiceCheck> {
+  try {
+    const alive = await cache.ping();
+    if (alive) {
+      const usingRedis = !!getConfig().REDIS_URL;
+      return { status: 'ok', detail: usingRedis ? 'Redis connected' : 'In-memory cache (no Redis)' };
+    }
+    return { status: 'error', detail: 'Cache ping failed' };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { status: 'error', detail: `Cache check threw: ${msg}` };
   }
-  return { status: 'ok' };
+}
+
+function getSchedulerCheck(): ServiceCheck {
+  try {
+    const status = getSchedulerStatus();
+    if (!status.isRunning) {
+      return { status: 'not_configured', detail: 'Scheduler not yet started' };
+    }
+    return { status: 'ok', detail: `${status.registeredJobs.length} job(s) registered` };
+  } catch {
+    return { status: 'degraded', detail: 'Scheduler status unavailable' };
+  }
 }
 
 function getStorageCheck(): ServiceCheck {
@@ -141,12 +165,15 @@ router.get(
   '/diagnostics',
   authenticate,
   allowRoles(Role.Admin),
-  (_req: Request, res: Response): void => {
+  async (_req: Request, res: Response): Promise<void> => {
+    const [cacheCheck] = await Promise.all([getCacheCheck()]);
+
     const checks: DiagnosticsResponse['checks'] = {
       database: getDatabaseCheck(),
-      cache: getCacheCheck(),
+      cache: cacheCheck,
       storage: getStorageCheck(),
       email: getEmailCheck(),
+      scheduler: getSchedulerCheck(),
     };
 
     const body: DiagnosticsResponse = {
@@ -158,6 +185,7 @@ router.get(
       timestamp: new Date().toISOString(),
       checks,
       memory: getMemoryUsage(),
+      rateLimitStoreSize: getRateLimitStoreSize(),
       security: getSecurityEventSummary(),
       metrics: collectMetrics(),
     };

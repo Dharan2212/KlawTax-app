@@ -103,9 +103,7 @@ const paymentSchema = new Schema<IPaymentDocument>(
     },
 
     razorpayPaymentId: {
-      type:   String,
-      sparse: true,
-      index:  true,
+      type: String,
     },
 
     razorpaySignature: {

@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   X, MessageCircle, ChevronDown, ArrowRight,
   Building2, ShieldCheck, BarChart3, Monitor, Phone,
   type LucideProps,
 } from "lucide-react";
 import type { FC } from "react";
+import { COMPLETE_PACKAGE } from "@/lib/services";
 
 // ── Config ────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ const WA_LINK =
 const NAV_LINKS = [
   { label: "Services",   href: "/services"  },
   { label: "Pricing",    href: "/pricing"   },
+  { label: "Blog",       href: "/blogs"     },
   { label: "About",      href: "/about"     },
   { label: "Contact",    href: "/contact"   },
 ];
@@ -37,30 +39,30 @@ const SERVICE_MENU: ServiceMenuItem[] = [
 
 // ── Animation variants ─────────────────────────────────────
 
-const drawerVariants = {
+const drawerVariants: Variants = {
   hidden: { x: "100%" },
   visible: { x: 0, transition: { type: "spring", stiffness: 320, damping: 32 } },
   exit:   { x: "100%", transition: { duration: 0.25, ease: [0.4, 0, 1, 1] } },
 };
 
-const overlayVariants = {
+const overlayVariants: Variants = {
   hidden:  { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.25 } },
   exit:    { opacity: 0, transition: { duration: 0.2 } },
 };
 
-const dropdownVariants = {
+const dropdownVariants: Variants = {
   hidden:  { opacity: 0, y: -6, scale: 0.97 },
   visible: { opacity: 1, y: 0,  scale: 1, transition: { duration: 0.18, ease: [0, 0, 0.2, 1] } },
   exit:    { opacity: 0, y: -4, scale: 0.97, transition: { duration: 0.12 } },
 };
 
-const linkListVariants = {
+const linkListVariants: Variants = {
   hidden:  { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.08 } },
 };
 
-const linkItemVariants = {
+const linkItemVariants: Variants = {
   hidden:  { opacity: 0, x: 20 },
   visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0, 0, 0.2, 1] } },
 };
@@ -98,6 +100,8 @@ export default function Navbar() {
     <>
       {/* ── Main Navbar bar ── */}
       <header
+        role="banner"
+        aria-label="Site header"
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         style={{
           background:    scrolled ? "rgba(255,255,255,0.97)" : "transparent",
@@ -109,7 +113,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
 
           {/* Logo */}
-          <Link to="/" style={{ textDecoration: "none" }}>
+          <Link to="/" aria-label="KlawTax home" style={{ textDecoration: "none" }}>
             <span
               style={{
                 fontFamily:    "'Sora', sans-serif",
@@ -128,7 +132,7 @@ export default function Navbar() {
           </Link>
 
           {/* ── Desktop nav ── */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-1">
             {/* Services with dropdown */}
             <div
               className="relative"
@@ -192,18 +196,28 @@ export default function Navbar() {
             </div>
 
             {/* Other nav links */}
-            {NAV_LINKS.slice(1).map(({ label, href }) => (
-              <Link
-                key={href}
-                to={href}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-150"
-                style={{ fontFamily: "'DM Sans', sans-serif", color: textColor, textDecoration: "none" }}
-                onMouseEnter={(e) => !isDark && (e.currentTarget.style.background = "#EFF6FF")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                {label}
-              </Link>
-            ))}
+            {NAV_LINKS.slice(1).map(({ label, href }) => {
+              const isActive = location.pathname === href ||
+                (href === "/blogs" && location.pathname.startsWith("/blogs"));
+              return (
+                <Link
+                  key={href}
+                  to={href}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-150"
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    color: isActive ? "#1E3A8A" : textColor,
+                    textDecoration: "none",
+                    background: isActive && !isDark ? "#EFF6FF" : "transparent",
+                    borderBottom: isActive ? "2px solid #1E3A8A" : "2px solid transparent",
+                  }}
+                  onMouseEnter={(e) => !isDark && (e.currentTarget.style.background = "#EFF6FF")}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive && !isDark ? "#EFF6FF" : "transparent"; }}
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* ── Desktop CTAs ── */}
@@ -344,6 +358,7 @@ export default function Navbar() {
                   {[
                     { label: "All Services",    href: "/services"  },
                     { label: "Pricing",          href: "/pricing"   },
+                    { label: "Blog & Guides",    href: "/blogs"     },
                     { label: "About Us",         href: "/about"     },
                     { label: "Contact",          href: "/contact"   },
                     { label: "My Dashboard",     href: "/dashboard" },
@@ -393,7 +408,7 @@ export default function Navbar() {
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5"
                   style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, background: "linear-gradient(90deg, #D97706, #F59E0B)", color: "#0F172A", textDecoration: "none", boxShadow: "0 4px 16px rgba(217,119,6,0.28)" }}
                 >
-                  Get Started — ₹13,500
+                  Get Started — ₹{COMPLETE_PACKAGE.price.toLocaleString("en-IN")}
                   <ArrowRight size={14} strokeWidth={2.5} />
                 </Link>
               </div>

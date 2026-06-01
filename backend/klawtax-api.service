@@ -1,0 +1,63 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# KlawTax Backend — systemd Service Unit
+# File: /etc/systemd/system/klawtax-api.service
+#
+# INSTALL:
+#   sudo cp klawtax-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable klawtax-api
+#   sudo systemctl start klawtax-api
+#   sudo systemctl status klawtax-api
+#
+# LOGS:
+#   sudo journalctl -u klawtax-api -f           # tail logs
+#   sudo journalctl -u klawtax-api --since today
+# ══════════════════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=KlawTax API Server (v1.5)
+Documentation=https://github.com/your-org/klawtax
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+# ── Identity ─────────────────────────────────────────────────────────────────
+Type=simple
+User=klawtax
+Group=klawtax
+
+# ── Working Directory ─────────────────────────────────────────────────────────
+WorkingDirectory=/var/www/klawtax/backend
+
+# ── Environment ───────────────────────────────────────────────────────────────
+# Load variables from .env file (safer than inline EnvironmentFile for secrets)
+EnvironmentFile=/var/www/klawtax/backend/.env
+
+# ── Startup Command ───────────────────────────────────────────────────────────
+ExecStart=/usr/bin/node dist/server.js
+
+# ── Restart Policy ───────────────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# ── Graceful Shutdown ────────────────────────────────────────────────────────
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+# Logs go to journald; view with: journalctl -u klawtax-api
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=klawtax-api
+
+# ── Security Hardening ───────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/klawtax/backend/logs
+
+[Install]
+WantedBy=multi-user.target

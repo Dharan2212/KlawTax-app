@@ -17,6 +17,7 @@ import {
   getAdminRecentActivity,
 } from './adminDashboardService';
 import type { AdminDashboardQuery, DashboardPeriod } from './adminDashboardTypes';
+import { getOrSetAdminDashboard } from '../../../utils/cache/index';
 
 // ─── Query parser ─────────────────────────────────────────────────────────────
 
@@ -44,7 +45,11 @@ export async function handleGetAdminDashboard(
   req: Request, res: Response, next: NextFunction,
 ): Promise<void> {
   try {
-    const data = await buildAdminDashboard(parseDashboardQuery(req));
+    const query = parseDashboardQuery(req);
+    // Custom date ranges bypass cache (not cacheable by period key alone)
+    const data = query.period === 'custom'
+      ? await buildAdminDashboard(query)
+      : await getOrSetAdminDashboard(() => buildAdminDashboard(query));
     sendSuccess(res, data, { message: 'Admin dashboard loaded' });
   } catch (err) { next(err); }
 }

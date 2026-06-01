@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchClientProjects, type ApiProject } from "@/lib/crmApi";
+import { fetchClientProjects, type ClientProjectSummary } from "@/lib/crmApi";
 import { post } from "@/lib/api";
 import {
   Loader2, AlertCircle, RefreshCw, Upload, FileText,
@@ -25,7 +25,7 @@ export default function ClientSubmission() {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [projects, setProjects]     = useState<ApiProject[]>([]);
+  const [projects, setProjects]     = useState<ClientProjectSummary[]>([]);
   const [selectedProject, setSelected] = useState<string>("");
   const [selectedDocType, setDocType] = useState<string>(REQUIRED_DOCS[0].id);
   const [loading, setLoading]       = useState(true);
@@ -39,10 +39,10 @@ export default function ClientSubmission() {
     setLoading(true);
     setError(false);
     try {
-      const data = await fetchClientProjects();
-      const active = (data ?? []).filter((p) => !["completed", "cancelled", "archived"].includes(p.projectStatus ?? ""));
+      const res = await fetchClientProjects({ limit: 50 });
+      const active = (res.projects ?? []).filter((p) => !["completed", "cancelled", "archived"].includes(p.projectStatus ?? ""));
       setProjects(active);
-      if (active.length > 0) setSelected(active[0]._id);
+      if (active.length > 0) setSelected(active[0].projectId);
     } catch {
       setError(true);
     } finally {
@@ -157,7 +157,7 @@ export default function ClientSubmission() {
               className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
               style={{ background: "#F8FAFC", border: "1px solid #E8EDF3", color: "#334155" }}>
               {projects.map((p) => (
-                <option key={p._id} value={p._id}>{p.title || p.projectCode}</option>
+                <option key={p.projectId} value={p.projectId}>{p.title || p.projectCode}</option>
               ))}
             </select>
           </div>

@@ -252,6 +252,21 @@ export interface RecentActivitySummary {
 
 // ─── Full Admin Dashboard Response ───────────────────────────────────────────
 
+export interface ClientStatsSummary {
+  totalClients:      number;
+  activeClients:     number;
+  newClientsToday:   number;
+  newClientsMonth:   number;
+  activeEmployees:   number;
+}
+
+export interface FollowUpCounts {
+  overdue:  number;
+  today:    number;
+  upcoming: number;
+  total:    number;
+}
+
 export interface AdminDashboardResponse {
   /** ISO timestamp of snapshot generation */
   generatedAt:      string;
@@ -263,4 +278,6 @@ export interface AdminDashboardResponse {
   leads:            LeadMetricsSummary;
   workload:         WorkloadSummary;
   recentActivity:   RecentActivitySummary;
+  clientStats:      ClientStatsSummary;
+  followUpCounts:   FollowUpCounts;
 }

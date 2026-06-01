@@ -3,6 +3,7 @@ import { WebhookProvider, WebhookProcessingStatus } from '../../models/enums';
 import { verifyWebhookSignature }   from '../payments/razorpayHelper';
 import { processWebhookPaymentEvent } from '../payments/paymentService';
 import { logger } from '../../utils/logger';
+import { captureEvent } from '../../utils/telemetry/telemetry';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,10 @@ export async function processRazorpayWebhook(
       error: errorMessage,
       retryCount,
     });
+
+    if (isPermanent) {
+      captureEvent('webhook.failed_permanent', { eventType, razorpayEventId, retryCount }, {});
+    }
 
     return { status: 'failed', message: errorMessage, eventId: razorpayEventId };
   }

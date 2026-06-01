@@ -13,6 +13,7 @@ import { ScheduledJob } from '../models/scheduledJob';
 import { ScheduledJobStatus, FailedJobSeverity } from '../models/enums';
 import { FailedJobService } from './failedJobService';
 import { logger } from '../utils/logger';
+import { captureEvent } from '../utils/telemetry/telemetry';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,10 @@ export async function runJob(
     });
 
     logger.error('[JobRunner] Job failed', { jobName, durationMs, errorMessage });
+
+    // Emit telemetry event for job failure visibility
+    captureEvent('job.failed', { jobName, durationMs, errorMessage }, {});
+
     return { jobName, status: 'failed', durationMs, error: errorMessage };
   }
 }

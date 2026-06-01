@@ -1,8 +1,8 @@
 /**
- * ClientDashboard — Batch 3 (live API + auth identity)
+ * ClientDashboard — Batch 5.3 (live API, correct backend types)
  *
  * Uses useAuth() for identity. Uses fetchClientDashboard() for all data.
- * No mock store dependency for business data.
+ * All types aligned with backend clientDashboardService response shapes.
  */
 
 import type { ReactNode } from "react";
@@ -12,12 +12,19 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import {
   fetchClientDashboard,
-  fetchClientProjects,
   fetchClientPayments,
-  type ClientDashboard as ClientDashboardData,
-  type ApiProject,
-  type ApiInvoice,
+  type ClientDashboardSnapshot,
+  type ClientPaymentSummary,
+  type ClientProjectSummary,
+  type ClientInvoiceSummary,
+  type ClientTimelineEntry,
 } from "@/lib/crmApi";
+import {
+  fmtDate,
+  fmtCurrency,
+  ageLabel,
+  CLIENT_PROJECT_STATUS_CFG,
+} from "@/lib/crmUtils";
 import {
   FolderKanban, Calendar, CheckCircle2, Clock, ArrowRight,
   FileText, Send, MessageCircle, AlertCircle,
@@ -27,37 +34,9 @@ import {
 
 // ── Helpers ────────────────────────────────────────────────────
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-}
-function fmtDateShort(d: string) {
-  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-}
-function daysLeft(d: string) {
-  return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
-}
-function ageLabel(iso: string): string {
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7)  return `${days}d ago`;
-  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-}
-function fmtCurrency(n: number) { return `₹${n.toLocaleString("en-IN")}`; }
-
-// ── Status config ──────────────────────────────────────────────
-
-const PROJECT_STATUS: Record<string, { label: string; bg: string; color: string }> = {
-  draft:          { label: "Getting Started",  bg: "rgba(100,116,139,0.10)", color: "#475569" },
-  onboarding:     { label: "Onboarding",       bg: "rgba(124,58,237,0.10)", color: "#6D28D9" },
-  active:         { label: "In Progress",      bg: "rgba(37,99,235,0.10)",  color: "#1E3A8A" },
-  in_progress:    { label: "In Progress",      bg: "rgba(37,99,235,0.10)",  color: "#1E3A8A" },
-  waiting_client: { label: "Action Required",  bg: "rgba(245,158,11,0.12)", color: "#B45309" },
-  in_review:      { label: "Under Review",     bg: "rgba(124,58,237,0.10)", color: "#6D28D9" },
-  completed:      { label: "Completed",        bg: "rgba(22,163,74,0.10)",  color: "#15803D" },
-  delivered:      { label: "Delivered",        bg: "rgba(22,163,74,0.15)",  color: "#14532D" },
-  cancelled:      { label: "Cancelled",        bg: "rgba(220,38,38,0.10)",  color: "#DC2626" },
-};
+// ── Status config (imported from crmUtils — see @/lib/crmUtils) ───────────
+// Aliased locally so call sites need no other changes.
+const PROJECT_STATUS = CLIENT_PROJECT_STATUS_CFG;
 
 // ── Sub-components ─────────────────────────────────────────────
 
@@ -115,9 +94,8 @@ export default function ClientDashboard() {
   const navigate   = useNavigate();
   const { user, role } = useAuth();
 
-  const [dash, setDash]         = useState<ClientDashboardData | null>(null);
-  const [projects, setProjects] = useState<ApiProject[]>([]);
-  const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
+  const [dash, setDash]         = useState<ClientDashboardSnapshot | null>(null);
+  const [payments, setPayments] = useState<ClientPaymentSummary | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(false);
 
@@ -125,14 +103,12 @@ export default function ClientDashboard() {
     setLoading(true);
     setError(false);
     try {
-      const [dashData, projData, payData] = await Promise.all([
+      const [dashData, payData] = await Promise.all([
         fetchClientDashboard(),
-        fetchClientProjects(),
         fetchClientPayments(),
       ]);
       setDash(dashData);
-      setProjects(projData ?? []);
-      setInvoices(payData ?? []);
+      setPayments(payData);
     } catch {
       setError(true);
     } finally {
@@ -180,17 +156,29 @@ export default function ClientDashboard() {
 
   // ── Derived data ──────────────────────────────────────────────
 
-  const clientName     = `${user.firstName} ${user.lastName}`;
-  const activeProjects = dash?.activeProjects ?? projects.filter((p) => !["completed", "cancelled", "archived"].includes(p.projectStatus ?? ""));
-  const completedProjects = dash?.completedProjects ?? projects.filter((p) => p.projectStatus === "completed");
-  const pendingPayments = dash?.pendingPayments ?? invoices.filter((i) => i.invoiceStatus !== "paid");
-  const recentTimeline = dash?.recentTimelineEntries ?? [];
+  const totals         = dash?.totals;
+  const activeProjects: ClientProjectSummary[] = dash?.activeProjects ?? [];
+  const recentTimeline: ClientTimelineEntry[]  = dash?.recentTimeline  ?? [];
+  const pendingInvoices: ClientInvoiceSummary[] = dash?.pendingInvoices ?? [];
 
   const mainProject = activeProjects[0] ?? null;
   const hasActionRequired = activeProjects.some((p) => p.projectStatus === "waiting_client");
-  const totalDue = pendingPayments.reduce((sum, i) => sum + (i.amountDue ?? 0), 0);
 
-  const progressInfo = mainProject ? getProgressSteps(mainProject.projectStatus ?? "") : null;
+  // Calculate total due from pending invoices
+  const totalDue = payments?.totalOutstanding ?? pendingInvoices.reduce((s, i) => s + i.amountDue, 0);
+
+  const progressInfo = mainProject ? getProgressSteps(mainProject.projectStatus) : null;
+
+  // Payment display invoices — prefer full payment summary, fallback to pending invoices
+  const displayInvoices = payments?.invoices ?? pendingInvoices.map((i) => ({
+    invoiceId:     i.invoiceId,
+    invoiceNumber: i.invoiceNumber,
+    invoiceStatus: i.invoiceStatus,
+    totalAmount:   i.totalAmount,
+    amountPaid:    i.amountPaid,
+    amountDue:     i.amountDue,
+    dueDate:       i.dueDate,
+  }));
 
   return (
     <motion.div
@@ -245,11 +233,11 @@ export default function ClientDashboard() {
       )}
 
       {/* KPI strip */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <FolderKanban size={16} />, label: "Active", value: activeProjects.length, color: "#1E3A8A", bg: "#EFF6FF" },
-          { icon: <CheckCircle2 size={16} />, label: "Completed", value: completedProjects.length, color: "#15803D", bg: "#DCFCE7" },
-          { icon: <CreditCard size={16} />, label: "Due", value: totalDue > 0 ? fmtCurrency(totalDue) : "₹0", color: "#D97706", bg: "#FEF3C7" },
+          { icon: <FolderKanban size={16} />, label: "Active",    value: totals?.activeProjects    ?? activeProjects.length, color: "#1E3A8A", bg: "#EFF6FF" },
+          { icon: <CheckCircle2 size={16} />, label: "Completed", value: totals?.completedProjects ?? 0,                     color: "#15803D", bg: "#DCFCE7" },
+          { icon: <CreditCard size={16} />,   label: "Due",       value: totalDue > 0 ? fmtCurrency(totalDue) : "₹0",       color: "#D97706", bg: "#FEF3C7" },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl p-4 flex flex-col items-center gap-2"
             style={{ background: "white", border: "1px solid #E8EDF3", boxShadow: "0 1px 4px rgba(15,27,76,0.05)" }}>
@@ -281,8 +269,8 @@ export default function ClientDashboard() {
                 <p className="text-xs text-neutral-400 mt-0.5">{mainProject.projectCode}</p>
               </div>
               <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
-                style={PROJECT_STATUS[mainProject.projectStatus ?? ""] ?? PROJECT_STATUS.active}>
-                {PROJECT_STATUS[mainProject.projectStatus ?? ""]?.label ?? mainProject.projectStatus}
+                style={PROJECT_STATUS[mainProject.projectStatus] ?? PROJECT_STATUS.active}>
+                {PROJECT_STATUS[mainProject.projectStatus]?.label ?? mainProject.projectStatus}
               </span>
             </div>
 
@@ -299,9 +287,9 @@ export default function ClientDashboard() {
             </div>
 
             {/* Steps */}
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1">
               {["Started", "Docs", "Processing", "Review", "Done"].map((step, i) => {
-                const done = progressInfo.step > i;
+                const done   = progressInfo.step > i;
                 const active = progressInfo.step === i;
                 return (
                   <div key={step} className="flex flex-col items-center gap-1">
@@ -337,15 +325,15 @@ export default function ClientDashboard() {
           />
           <div className="p-4 space-y-0">
             {recentTimeline.length === 0 && <EmptyMini message="No updates yet" />}
-            {recentTimeline.slice(0, 5).map((entry) => (
-              <div key={entry._id} className="flex items-start gap-3 py-3" style={{ borderBottom: "1px solid #F8FAFC" }}>
+            {recentTimeline.slice(0, 5).map((entry, idx) => (
+              <div key={entry.entryId ?? idx} className="flex items-start gap-3 py-3" style={{ borderBottom: "1px solid #F8FAFC" }}>
                 <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                   style={{ background: "#EFF6FF", color: "#1E3A8A" }}>
                   <FileText size={10} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-neutral-900">{entry.title}</p>
-                  {entry.content && <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">{entry.content}</p>}
+                  {entry.description && <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">{entry.description}</p>}
                 </div>
                 <span className="text-[10px] text-neutral-400 flex-shrink-0 whitespace-nowrap">{ageLabel(entry.createdAt)}</span>
               </div>
@@ -361,15 +349,15 @@ export default function ClientDashboard() {
             action={{ label: "View all", onClick: () => navigate("/crm/client/payments") }}
           />
           <div className="p-4 space-y-2">
-            {invoices.length === 0 && <EmptyMini message="No invoices found" />}
-            {invoices.slice(0, 4).map((inv) => {
+            {displayInvoices.length === 0 && <EmptyMini message="No invoices found" />}
+            {displayInvoices.slice(0, 4).map((inv, idx) => {
               const isPaid = inv.invoiceStatus === "paid";
               return (
-                <div key={inv._id} className="flex items-center justify-between p-3 rounded-xl gap-3"
+                <div key={inv.invoiceId ?? idx} className="flex items-center justify-between p-3 rounded-xl gap-3"
                   style={{ background: "#F8FAFC", border: "1px solid #E8EDF3" }}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-neutral-900 truncate">{inv.title || inv.invoiceNumber}</p>
-                    <p className="text-[10px] text-neutral-400 mt-0.5">{fmtDateShort(inv.createdAt)}</p>
+                    <p className="text-xs font-semibold text-neutral-900 truncate">{inv.invoiceNumber}</p>
+                    {inv.dueDate && <p className="text-[10px] text-neutral-400 mt-0.5">Due {fmtDate(inv.dueDate)}</p>}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", color: isPaid ? "#15803D" : "#B45309" }}>

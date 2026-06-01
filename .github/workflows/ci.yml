@@ -1,0 +1,172 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# KlawTax — CI Pipeline
+# Runs on every push to main/staging and on all pull requests.
+#
+# Stages:
+#   1. backend-ci  — lint, typecheck, test, build
+#   2. frontend-ci — lint, typecheck, build
+#   3. deploy-staging  — auto-deploy to staging on push to staging branch
+#   4. deploy-production — manual-gate deploy to production on push to main
+# ══════════════════════════════════════════════════════════════════════════════
+
+name: KlawTax CI/CD
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Backend CI ───────────────────────────────────────────────────────────────
+  backend-ci:
+    name: Backend — Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          # Minimal vars required by test suite (no real secrets needed)
+          MONGODB_URI: mongodb://localhost:27017/klawtax_test
+          JWT_SECRET: ci_test_jwt_secret_minimum_64_characters_long_padding_here_xxx
+          JWT_REFRESH_SECRET: ci_test_refresh_secret_minimum_64_characters_padding_here_xxx
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: backend/dist/
+          retention-days: 1
+
+  # ── Frontend CI ──────────────────────────────────────────────────────────────
+  frontend-ci:
+    name: Frontend — Lint / Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api.klawtax.online
+          VITE_RAZORPAY_KEY_ID: rzp_live_placeholder
+          VITE_WA_NUMBER: "917387731313"
+          VITE_CONTACT_PHONE: "917387731313"
+          VITE_CONTACT_EMAIL: info@klawtax.online
+          VITE_UPI_ID: placeholder@upi
+          VITE_API_DEBUG: "false"
+
+  # ── Deploy to Staging ─────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    environment: staging
+
+    steps:
+      - name: Deploy to staging server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /var/www/klawtax
+            git pull origin staging
+            cd backend && npm ci --omit=dev && npm run build
+            pm2 reload klawtax-api --update-env
+            cd ../frontend && npm ci && npm run build
+
+      - name: Smoke test staging
+        run: |
+          sleep 15
+          curl -sf https://staging-api.klawtax.online/api/v1/health || exit 1
+          curl -sf https://staging-api.klawtax.online/api/v1/health/ready || exit 1
+          echo "✅ Staging smoke tests passed"
+
+  # ── Deploy to Production ──────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy → Production (Manual Gate)
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production   # Requires manual approval in GitHub Environments
+
+    steps:
+      - name: Deploy backend to production
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /var/www/klawtax
+            git pull origin main
+            cd backend && npm ci --omit=dev && npm run build
+            pm2 reload klawtax-api --update-env
+            cd ../frontend && npm ci && npm run build
+
+      - name: Production smoke test
+        run: |
+          sleep 20
+          curl -sf https://api.klawtax.online/api/v1/health || exit 1
+          curl -sf https://api.klawtax.online/api/v1/health/ready || exit 1
+          curl -sf https://api.klawtax.online/api/v1/services || exit 1
+          echo "✅ Production smoke tests passed"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "🚨 Production deployment FAILED — manual rollback may be required"
+          echo "Rollback: ssh into server and run: pm2 describe klawtax-api"

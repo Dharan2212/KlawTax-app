@@ -10,7 +10,7 @@ import Footer from "@/components/layout/Footer";
 import StickyMobileBar from "@/components/shared/StickyMobileBar";
 import SEO from "@/components/shared/SEO";
 import { buildServiceSchema, buildBreadcrumbSchema } from "@/lib/seo";
-import { getServiceBySlug, getRelatedServices, SERVICES_LIST } from "@/lib/services";
+import { getServiceBySlug, getRelatedServices, SERVICES_LIST, COMPLETE_PACKAGE } from "@/lib/services";
 import { getServiceIcon, CATEGORY_ICON_STYLE } from "@/lib/serviceIcons";
 import { pageTransition, staggerContainer, staggerItem } from "@/lib/motion";
 import InquiryForm from "@/components/features/InquiryForm";
@@ -86,7 +86,7 @@ export default function ServiceDetailPage() {
         ]}
       />
       <Navbar />
-      <main role="main" className="flex-1 pt-20">
+      <main id="main-content" role="main" className="flex-1 pt-20">
 
         {/* Breadcrumb */}
         <div style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
@@ -100,7 +100,7 @@ export default function ServiceDetailPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="grid lg:grid-cols-[1fr_360px] gap-10 items-start">
+          <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
 
             {/* LEFT content */}
             <motion.div variants={staggerContainer} initial="hidden" animate="visible">
@@ -240,7 +240,7 @@ export default function ServiceDetailPage() {
                         💡 Need {service.title} + 6 more services?
                       </p>
                       <Link to="/checkout?service=section8-complete" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.8125rem", fontWeight: 700, color: "#B45309", textDecoration: "none" }}>
-                        Get Complete Package ₹13,500 →
+                        Get Complete Package ₹{COMPLETE_PACKAGE.price.toLocaleString("en-IN")} →
                       </Link>
                     </div>
                   )}

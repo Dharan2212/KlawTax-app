@@ -23,7 +23,7 @@ notificationRouter.get(
         clientSafeOnly: isClient,
       });
 
-      sendSuccess(res, { unreadCount: count });
+      sendSuccess(res, { count });
     } catch (err) {
       next(err);
     }
@@ -53,7 +53,7 @@ notificationRouter.get(
         limit,
       });
 
-      sendSuccess(res, result.notifications, { meta: result.meta });
+      sendSuccess(res, { notifications: result.notifications, total: result.meta.total }, { meta: result.meta });
     } catch (err) {
       next(err);
     }

@@ -30,6 +30,8 @@ import {
   getEmployeeActiveProjects,
   getEmployeeWorkload,
 } from '../modules/dashboards/employee/employeeDashboardService';
+import { cache, cacheKey } from '../utils/cache';
+import { EXTENDED_CACHE_TTL } from '../utils/cache/index';
 
 export const employeeDashboardRouter = Router();
 
@@ -81,7 +83,24 @@ employeeDashboardRouter.get(
     try {
       const { userId, employeeProfileId } = resolveEmployeeContext(req);
       const query = req.dashboardQuery ?? {};
-      const dashboard = await getEmployeeDashboard(userId, employeeProfileId, query);
+
+      // Cache the full dashboard snapshot, keyed by userId + window + previewLimit.
+      // Different query parameter combinations produce isolated cache entries,
+      // preventing stale data when a user switches time windows.
+      //
+      // Sub-endpoints (tasks, workload, due-today, pending-reviews, active-projects)
+      // are intentionally NOT cached: they are lightweight targeted queries
+      // used for live badge counts and workspace widgets where freshness matters.
+      const window = query.window ?? 'today';
+      const previewLimit = query.previewLimit ?? 5;
+      const key = `${cacheKey.employeeDashboard(userId)}:${window}:${previewLimit}`;
+
+      const dashboard = await cache.getOrSet(
+        key,
+        () => getEmployeeDashboard(userId, employeeProfileId, query),
+        EXTENDED_CACHE_TTL.EMPLOYEE_DASHBOARD
+      );
+
       sendSuccess(res, dashboard, { message: 'Employee dashboard loaded successfully' });
     } catch (err) {
       next(err);

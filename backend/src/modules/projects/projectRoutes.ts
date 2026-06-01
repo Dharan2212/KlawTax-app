@@ -55,6 +55,7 @@ import {
   validateSetPrimaryManager,
   parseProjectListQuery,
 } from '../../validators/projectValidators';
+import { invalidateAdminDashboard, invalidateEmployeeDashboard } from '../../utils/cache/index';
 
 
 
@@ -107,7 +108,7 @@ projectRouter.get(
         { page, limit, skip }
       );
 
-      sendSuccess(res, projects.map(buildProjectSummary), {
+      sendSuccess(res, { projects: projects.map(buildProjectSummary), total }, {
         meta: buildPaginationMeta(page, limit, total),
       });
     } catch (err) {
@@ -131,7 +132,7 @@ projectRouter.get(
         { page, limit, skip }
       );
 
-      sendSuccess(res, projects.map(buildProjectSummary), {
+      sendSuccess(res, { projects: projects.map(buildProjectSummary), total }, {
         meta: buildPaginationMeta(page, limit, total),
       });
     } catch (err) {
@@ -155,7 +156,7 @@ projectRouter.get(
         { page, limit, skip }
       );
 
-      sendSuccess(res, projects.map(buildProjectSummary), {
+      sendSuccess(res, { projects: projects.map(buildProjectSummary), total }, {
         meta: buildPaginationMeta(page, limit, total),
       });
     } catch (err) {
@@ -294,6 +295,9 @@ projectRouter.patch(
         new Types.ObjectId(auth.userId)
       );
 
+      // Invalidate admin dashboard cache — project status change affects aggregates
+      invalidateAdminDashboard().catch(() => {});
+
       sendSuccess(res, buildProjectSummary(updated), {
         message: `Project status changed to "${payload.status}".`,
       });
@@ -320,6 +324,15 @@ projectRouter.post(
         new Types.ObjectId(auth.userId)
       );
 
+      // Invalidate admin dashboard (workload summary changes) and the assigned
+      // employee's dashboard (new project appears in their workspace).
+      // Fire-and-forget: cache invalidation must not block the response.
+      invalidateAdminDashboard().catch(() => {});
+      const assignedUserId = typeof req.body?.userId === 'string' ? req.body.userId : null;
+      if (assignedUserId) {
+        invalidateEmployeeDashboard(assignedUserId).catch(() => {});
+      }
+
       sendSuccess(res, buildProjectSummary(updated), {
         message: 'Employee assigned to project.',
       });
@@ -341,11 +354,24 @@ projectRouter.delete(
       const projectId         = requireIdParam(req);
       const employeeProfileId = requireIdParam(req, 'profileId');
 
+      // Look up the userId of the employee being removed BEFORE the removal,
+      // so we can invalidate their dashboard cache.
+      const projectBefore = await getProjectById(projectId);
+      const removedAssignment = projectBefore.assignedEmployees?.find(
+        (e) => String(e.employeeProfileId) === String(employeeProfileId)
+      );
+
       const updated = await removeEmployee(
         projectId,
         employeeProfileId,
         new Types.ObjectId(auth.userId)
       );
+
+      // Invalidate admin dashboard and the removed employee's dashboard.
+      invalidateAdminDashboard().catch(() => {});
+      if (removedAssignment?.userId) {
+        invalidateEmployeeDashboard(String(removedAssignment.userId)).catch(() => {});
+      }
 
       sendSuccess(res, buildProjectSummary(updated), {
         message: 'Employee removed from project.',

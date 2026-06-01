@@ -1,24 +1,32 @@
 /**
- * ClientProjectView — Batch 3 (live API)
- * Shows the primary active project with timeline, docs, and payment status.
+ * ClientProjectView — Batch 5.3 (correct backend types)
+ * Uses ClientProjectDetail, ClientTimelineFeedResponse, ClientDocumentsResponse,
+ * ClientPaymentSummary from crmApi — all aligned with backend response shapes.
  */
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
-  fetchClientProjects, fetchClientTimeline, fetchClientPayments,
+  fetchClientProjects,
+  fetchClientTimeline,
+  fetchClientPayments,
   fetchClientDocuments,
-  type ApiProject, type ApiTimelineEntry, type ApiInvoice,
+  type ClientProjectSummary,
+  type ClientTimelineFeedResponse,
+  type ClientPaymentSummary,
+  type ClientDocument,
 } from "@/lib/crmApi";
 import {
   Loader2, AlertCircle, RefreshCw, Calendar, CreditCard,
-  Activity, FileText, ChevronDown, ChevronUp,
+  Activity, FileText, Download, FolderOpen,
 } from "lucide-react";
+
+// ── Helpers ────────────────────────────────────────────────────
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 function fmtCurrency(n: number) { return `₹${n.toLocaleString("en-IN")}`; }
-function ageLabel(iso: string) {
+function ageLabel(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
@@ -28,14 +36,14 @@ function ageLabel(iso: string) {
 
 const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
   draft:          { label: "Getting Started",  bg: "rgba(100,116,139,0.10)", color: "#475569" },
-  onboarding:     { label: "Onboarding",       bg: "rgba(124,58,237,0.10)", color: "#6D28D9" },
-  active:         { label: "In Progress",      bg: "rgba(37,99,235,0.10)",  color: "#1E3A8A" },
-  in_progress:    { label: "In Progress",      bg: "rgba(37,99,235,0.10)",  color: "#1E3A8A" },
-  waiting_client: { label: "Action Required",  bg: "rgba(245,158,11,0.12)", color: "#B45309" },
-  in_review:      { label: "Under Review",     bg: "rgba(124,58,237,0.10)", color: "#6D28D9" },
-  completed:      { label: "Completed",        bg: "rgba(22,163,74,0.10)",  color: "#15803D" },
-  delivered:      { label: "Delivered",        bg: "rgba(22,163,74,0.15)",  color: "#14532D" },
-  cancelled:      { label: "Cancelled",        bg: "rgba(220,38,38,0.10)",  color: "#DC2626" },
+  onboarding:     { label: "Onboarding",       bg: "rgba(124,58,237,0.10)",  color: "#6D28D9" },
+  active:         { label: "In Progress",      bg: "rgba(37,99,235,0.10)",   color: "#1E3A8A" },
+  in_progress:    { label: "In Progress",      bg: "rgba(37,99,235,0.10)",   color: "#1E3A8A" },
+  waiting_client: { label: "Action Required",  bg: "rgba(245,158,11,0.12)",  color: "#B45309" },
+  in_review:      { label: "Under Review",     bg: "rgba(124,58,237,0.10)",  color: "#6D28D9" },
+  completed:      { label: "Completed",        bg: "rgba(22,163,74,0.10)",   color: "#15803D" },
+  delivered:      { label: "Delivered",        bg: "rgba(22,163,74,0.15)",   color: "#14532D" },
+  cancelled:      { label: "Cancelled",        bg: "rgba(220,38,38,0.10)",   color: "#DC2626" },
 };
 
 const PROGRESS_STEP: Record<string, number> = {
@@ -45,35 +53,46 @@ const PROGRESS_STEP: Record<string, number> = {
 
 type Tab = "timeline" | "payments" | "documents";
 
+// ── State shape ────────────────────────────────────────────────
+
+interface ViewState {
+  project:   ClientProjectSummary | null;
+  timeline:  ClientTimelineFeedResponse | null;
+  payments:  ClientPaymentSummary | null;
+  documents: ClientDocument[];
+}
+
 export default function ClientProjectView() {
   const { user } = useAuth();
 
-  const [project, setProject]   = useState<ApiProject | null>(null);
-  const [timeline, setTimeline] = useState<ApiTimelineEntry[]>([]);
-  const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
-  const [documents, setDocuments] = useState<unknown[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(false);
-  const [tab, setTab]           = useState<Tab>("timeline");
+  const [state, setState]   = useState<ViewState>({ project: null, timeline: null, payments: null, documents: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(false);
+  const [tab, setTab]         = useState<Tab>("timeline");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const [projects, tl, invs, docs] = await Promise.all([
-        fetchClientProjects(),
-        fetchClientTimeline(),
+      const [projectsRes, timelineRes, paymentsRes, docsRes] = await Promise.all([
+        fetchClientProjects({ limit: 20 }),
+        fetchClientTimeline({ limit: 20 }),
         fetchClientPayments(),
-        fetchClientDocuments(),
+        fetchClientDocuments({ limit: 50 }),
       ]);
-      // Show the first active project, or any project
-      const active = (projects ?? []).find(
-        (p) => !["completed", "cancelled", "archived"].includes(p.projectStatus ?? "")
-      ) ?? (projects?.[0] ?? null);
-      setProject(active);
-      setTimeline(tl ?? []);
-      setInvoices(invs ?? []);
-      setDocuments(docs ?? []);
+
+      // Select first active project, fallback to any
+      const sorted = (projectsRes.projects ?? []);
+      const active = sorted.find(
+        (p) => !["completed", "cancelled", "archived"].includes(p.projectStatus)
+      ) ?? sorted[0] ?? null;
+
+      setState({
+        project:   active,
+        timeline:  timelineRes,
+        payments:  paymentsRes,
+        documents: docsRes.documents ?? [],
+      });
     } catch {
       setError(true);
     } finally {
@@ -92,12 +111,15 @@ export default function ClientProjectView() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <AlertCircle size={32} className="text-red-400" />
+        <p className="text-neutral-500 text-sm">Failed to load project details.</p>
         <button onClick={loadData} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "#1E3A8A", color: "white" }}>
           <RefreshCw size={14} /> Retry
         </button>
       </div>
     );
   }
+
+  const { project, timeline, payments, documents } = state;
 
   if (!project) {
     return (
@@ -109,11 +131,21 @@ export default function ClientProjectView() {
     );
   }
 
-  const sc         = STATUS_CFG[project.projectStatus ?? ""] ?? STATUS_CFG.active;
-  const stepIdx    = PROGRESS_STEP[project.projectStatus ?? ""] ?? 1;
-  const totalBilled = invoices.reduce((s, i) => s + i.totalAmount, 0);
-  const totalPaid   = invoices.reduce((s, i) => s + i.amountPaid, 0);
-  const totalDue    = invoices.reduce((s, i) => s + i.amountDue, 0);
+  const sc      = STATUS_CFG[project.projectStatus] ?? STATUS_CFG.active;
+  const stepIdx = PROGRESS_STEP[project.projectStatus] ?? 1;
+
+  // Derive payment totals from ClientPaymentSummary
+  const totalBilled = payments?.totalInvoiced    ?? 0;
+  const totalPaid   = payments?.totalPaid         ?? 0;
+  const totalDue    = payments?.totalOutstanding  ?? 0;
+  const invoices    = payments?.invoices          ?? [];
+
+  // Timeline entries from paginated response
+  const timelineEntries = timeline?.entries ?? [];
+
+  // Document counts
+  const totalDocs      = documents.length;
+  const deliverables   = documents.filter((d) => d.documentCategory === "deliverable" || d.documentStatus === "delivered");
 
   const steps = ["Started", "Onboarding", "Processing", "Your Input", "Review", "Done"];
 
@@ -127,7 +159,7 @@ export default function ClientProjectView() {
           </h1>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <p className="text-xs text-neutral-400">{project.projectCode}</p>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={sc}>{sc.label}</span>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: sc.bg, color: sc.color }}>{sc.label}</span>
             {project.isOverdue && (
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(220,38,38,0.10)", color: "#DC2626" }}>Overdue</span>
             )}
@@ -138,7 +170,7 @@ export default function ClientProjectView() {
         </button>
       </div>
 
-      {/* Progress */}
+      {/* Progress tracker */}
       <div className="rounded-2xl p-5" style={{ background: "white", border: "1px solid #E8EDF3" }}>
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-semibold text-neutral-700">{sc.label}</p>
@@ -148,7 +180,7 @@ export default function ClientProjectView() {
           <div className="h-full rounded-full transition-all duration-700"
             style={{ width: `${Math.round(((stepIdx + 1) / steps.length) * 100)}%`, background: "linear-gradient(90deg, #1E3A8A, #3B82F6)" }} />
         </div>
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
           {steps.map((s, i) => {
             const done   = i < stepIdx;
             const active = i === stepIdx;
@@ -170,8 +202,8 @@ export default function ClientProjectView() {
         )}
       </div>
 
-      {/* Payment summary */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Payment summary strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
           { label: "Total Billed", value: fmtCurrency(totalBilled), color: "#1E3A8A" },
           { label: "Paid",         value: fmtCurrency(totalPaid),   color: "#15803D" },
@@ -190,18 +222,20 @@ export default function ClientProjectView() {
           <button key={t} onClick={() => setTab(t)}
             className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize"
             style={{ background: tab === t ? "white" : "transparent", color: tab === t ? "#0F172A" : "#64748B", boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
-            {t === "timeline" ? "Updates" : t === "documents" ? `Docs (${documents.length})` : t}
+            {t === "timeline"  ? "Updates" :
+             t === "documents" ? `Docs (${totalDocs})` :
+             "Payments"}
           </button>
         ))}
       </div>
 
-      {/* Timeline */}
+      {/* Timeline tab */}
       {tab === "timeline" && (
         <div className="space-y-2">
-          {timeline.length === 0
+          {timelineEntries.length === 0
             ? <p className="text-center text-neutral-400 text-sm py-8">No updates yet — we'll post milestones here</p>
-            : timeline.map((entry) => (
-                <div key={entry._id} className="flex items-start gap-3 p-4 rounded-xl"
+            : timelineEntries.map((entry) => (
+                <div key={entry.entryId} className="flex items-start gap-3 p-4 rounded-xl"
                   style={{ background: "white", border: "1px solid #E8EDF3" }}>
                   <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                     style={{ background: "#EFF6FF" }}>
@@ -209,7 +243,10 @@ export default function ClientProjectView() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-neutral-900">{entry.title}</p>
-                    {entry.content && <p className="text-xs text-neutral-500 mt-1">{entry.content}</p>}
+                    {entry.description && <p className="text-xs text-neutral-500 mt-1">{entry.description}</p>}
+                    {entry.projectCode && entry.projectCode !== project.projectCode && (
+                      <p className="text-[10px] text-neutral-400 mt-1">{entry.projectCode}</p>
+                    )}
                     <p className="text-[10px] text-neutral-400 mt-1.5">{ageLabel(entry.createdAt)}</p>
                   </div>
                 </div>
@@ -218,19 +255,22 @@ export default function ClientProjectView() {
         </div>
       )}
 
-      {/* Payments */}
+      {/* Payments tab */}
       {tab === "payments" && (
         <div className="space-y-2">
           {invoices.length === 0
             ? <p className="text-center text-neutral-400 text-sm py-8">No invoices found</p>
-            : invoices.map((inv) => {
+            : invoices.map((inv, idx) => {
                 const isPaid = inv.invoiceStatus === "paid";
                 return (
-                  <div key={inv._id} className="flex items-center justify-between p-4 rounded-xl gap-3"
+                  <div key={inv.invoiceId ?? idx} className="flex items-center justify-between p-4 rounded-xl gap-3"
                     style={{ background: "white", border: `1px solid ${inv.amountDue > 0 ? "#FDE68A" : "#E8EDF3"}` }}>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-neutral-900">{inv.invoiceNumber}</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">{inv.title} · {fmtDate(inv.createdAt)}</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        {inv.projectTitle ?? ""}
+                        {inv.dueDate ? ` · Due ${fmtDate(inv.dueDate)}` : ""}
+                      </p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-sm font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", color: "#1E3A8A" }}>{fmtCurrency(inv.totalAmount)}</p>
@@ -245,37 +285,47 @@ export default function ClientProjectView() {
         </div>
       )}
 
-      {/* Documents */}
+      {/* Documents tab */}
       {tab === "documents" && (
         <div className="space-y-2">
           {documents.length === 0
             ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText size={28} className="text-neutral-300 mb-2" />
+                <FolderOpen size={28} className="text-neutral-300 mb-2" />
                 <p className="text-sm text-neutral-400">No documents available yet</p>
                 <p className="text-xs text-neutral-400 mt-1">Completed certificates will appear here for download</p>
               </div>
             )
-            : documents.map((doc: any, i) => (
-                <div key={doc._id ?? i} className="flex items-center justify-between p-4 rounded-xl"
-                  style={{ background: "white", border: "1px solid #E8EDF3" }}>
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText size={14} className="text-neutral-400 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-900 truncate">{doc.fileName || doc.documentType}</p>
-                      {doc.uploadedAt && <p className="text-xs text-neutral-400 mt-0.5">{fmtDate(doc.uploadedAt)}</p>}
+            : documents.map((doc) => {
+                const isDeliverable = doc.documentCategory === "deliverable" || doc.documentStatus === "delivered";
+                return (
+                  <div key={doc.documentId}
+                    className="flex items-center justify-between p-4 rounded-xl"
+                    style={{ background: isDeliverable ? "linear-gradient(135deg, #ECFDF5, #D1FAE5)" : "white", border: `1px solid ${isDeliverable ? "#A7F3D0" : "#E8EDF3"}` }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText size={14} className={isDeliverable ? "text-green-600" : "text-neutral-400"} style={{ flexShrink: 0 }} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-neutral-900 truncate">{doc.title || doc.fileName}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">{fmtDate(doc.uploadedAt)}</p>
+                      </div>
                     </div>
+                    {isDeliverable && (
+                      <a href={`${(import.meta.env.VITE_API_BASE_URL as string) || ""}/documents/${doc.documentId}/download`}
+                        target="_blank" rel="noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold flex-shrink-0"
+                        style={{ background: "#15803D", color: "white" }}>
+                        <Download size={12} /> Download
+                      </a>
+                    )}
                   </div>
-                  {doc.downloadUrl && (
-                    <a href={doc.downloadUrl} target="_blank" rel="noreferrer"
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0"
-                      style={{ background: "#EFF6FF", color: "#1E3A8A" }}>
-                      Download
-                    </a>
-                  )}
-                </div>
-              ))
+                );
+              })
           }
+          {deliverables.length === 0 && documents.length > 0 && (
+            <p className="text-xs text-neutral-400 text-center pt-2">
+              Documents under review — downloadable certificates will appear here once approved
+            </p>
+          )}
         </div>
       )}
     </div>

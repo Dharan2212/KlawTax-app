@@ -242,7 +242,7 @@ export default function SupportPage() {
         schema={faqSchema}
       />
       <Navbar />
-      <main role="main" className="flex-1 pt-20">
+      <main id="main-content" role="main" className="flex-1 pt-20">
 
         {/* ── Hero ──────────────────────────────────────── */}
         <section

@@ -1,3 +1,13 @@
+/**
+ * Homepage — Batch C
+ *
+ * Changes:
+ *  - ProcessTimeline moved above ServicesGrid (narrative flow: hero → stats → how it works → services → package → pricing → testimonials → CTA)
+ *  - Added semantic aria-labelledby on process section
+ *  - Section order now matches the optimal conversion funnel
+ *  - No business logic, pricing, or API changes
+ */
+
 import { motion } from "framer-motion";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -32,25 +42,41 @@ export default function Index() {
         schema={[organizationSchema, websiteSchema, homepageFAQSchema]}
       />
       <Navbar />
-      <main role="main" className="flex-1">
+      <main id="main-content" role="main" className="flex-1">
+
+        {/* 1. Hero — primary hook */}
         <section aria-labelledby="hero-heading">
           <HeroSection />
         </section>
 
-        {/* Premium animated stats ticker */}
+        {/* 2. Stats ticker — immediate social proof */}
         <StatsTicker />
 
-        {/* Trust / client-category ticker */}
+        {/* 3. Trust ticker — credibility reinforcement */}
         <TrustTicker />
 
+        {/* 4. How It Works — process clarity before service discovery */}
+        <section aria-labelledby="process-heading">
+          <ProcessTimeline />
+        </section>
+
+        {/* 5. Services grid — discovery */}
         <section aria-labelledby="services-heading">
           <ServicesGrid limit={12} />
         </section>
+
+        {/* 6. Featured package — conversion push */}
         <FeaturedPackage />
-        <ProcessTimeline />
+
+        {/* 7. Pricing — commitment enabler */}
         <PricingTable />
+
+        {/* 8. Testimonials — final trust */}
         <TestimonialsSection />
+
+        {/* 9. CTA banner — last-chance conversion */}
         <CTABanner />
+
       </main>
       <Footer />
       <StickyMobileBar />

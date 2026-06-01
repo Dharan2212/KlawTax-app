@@ -137,24 +137,23 @@ let isRunning = false;
  * Uses upsert — safe to call on every startup.
  */
 export async function seedScheduledJobs(): Promise<void> {
+  // Fix: $setOnInsert and $set must NOT share any field paths.
+  // description/cronExpression belong in $set (update always).
+  // jobName/counters/status belong in $setOnInsert (insert only).
   const ops = JOB_DEFINITIONS.map((def) => ({
     updateOne: {
       filter: { jobName: def.jobName },
       update: {
         $setOnInsert: {
-          jobName: def.jobName,
-          description: def.description,
-          cronExpression: def.cronExpression,
-          isEnabled: true,
-          lastRunStatus: ScheduledJobStatus.Skipped,
-          totalRunCount: 0,
+          jobName:           def.jobName,
+          isEnabled:         true,
+          lastRunStatus:     ScheduledJobStatus.Skipped,
+          totalRunCount:     0,
           totalFailureCount: 0,
-          createdAt: new Date(),
         },
         $set: {
-          description: def.description,
+          description:    def.description,
           cronExpression: def.cronExpression,
-          updatedAt: new Date(),
         },
       },
       upsert: true,

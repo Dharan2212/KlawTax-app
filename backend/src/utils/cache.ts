@@ -102,6 +102,23 @@ export const cache = {
     store.clear();
     logger.debug('[cache] Store flushed');
   },
+
+  /**
+   * Liveness ping for health checks.
+   * For the in-memory implementation this always succeeds.
+   * When replaced with Redis, this calls `client.ping()`.
+   */
+  async ping(): Promise<boolean> {
+    try {
+      const testKey = '__health_ping__';
+      await cache.set(testKey, 1, 5);
+      const result = await cache.get<number>(testKey);
+      await cache.del(testKey);
+      return result === 1;
+    } catch {
+      return false;
+    }
+  },
 };
 
 // ─── TTL Constants ────────────────────────────────────────────────────────────

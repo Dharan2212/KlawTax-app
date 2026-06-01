@@ -223,9 +223,6 @@ TimelineEntrySchema.index({ projectId: 1, visibility: 1, createdAt: -1 });
 // Task-level timeline: all events for a specific task
 TimelineEntrySchema.index({ taskId: 1, createdAt: -1 });
 
-// Client portal feed: client-visible entries for a project
-TimelineEntrySchema.index({ projectId: 1, visibility: 1, createdAt: -1 });
-
 // Grouped feed: group key + grouped-at for ordered grouped entries
 TimelineEntrySchema.index({ groupKey: 1, groupedAt: -1 });
 

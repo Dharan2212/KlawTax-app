@@ -83,7 +83,6 @@ const LeadSchema = new Schema<ILead>(
       type: String,
       trim: true,
       lowercase: true,
-      sparse: true,          // Allows null/undefined while keeping unique index
       default: undefined,
     },
     phone: {

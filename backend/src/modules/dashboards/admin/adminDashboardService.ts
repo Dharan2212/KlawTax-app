@@ -22,6 +22,7 @@ import { Payment }       from '../../../models/payment';
 import { SupportTicket } from '../../../models/supportTicket';
 import { ExportJob }     from '../../../models/exportJob';
 import { User }          from '../../../models/user';
+import { ClientProfile } from '../../../models/clientProfile';
 
 import { ProjectStatus, ACTIVE_WORK_STATUSES } from '../../../models/projectEnums';
 import { InvoiceStatus, PaymentStatus }         from '../../../models/invoiceEnums';
@@ -44,6 +45,8 @@ import type {
   WorkloadSummary,
   EmployeeWorkloadItem,
   RecentActivitySummary,
+  ClientStatsSummary,
+  FollowUpCounts,
 } from './adminDashboardTypes';
 
 // ─── Internal aggregation result interfaces ───────────────────────────────────
@@ -721,6 +724,43 @@ async function buildRecentActivity(limit: number): Promise<RecentActivitySummary
   };
 }
 
+// ─── 7. Client Stats ──────────────────────────────────────────────────────────
+
+async function buildClientStatsSummary(): Promise<ClientStatsSummary> {
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+  const monthStart = new Date(now); monthStart.setDate(monthStart.getDate() - 30);
+
+  const [totalClients, activeClients, newToday, newMonth, activeEmployees] = await Promise.all([
+    ClientProfile.countDocuments({}),
+    ClientProfile.countDocuments({ onboardingStatus: { $in: ['active', 'onboarded'] } }),
+    User.countDocuments({ role: 'client', createdAt: { $gte: todayStart } }),
+    User.countDocuments({ role: 'client', createdAt: { $gte: monthStart } }),
+    User.countDocuments({ role: 'employee', deactivatedAt: { $exists: false } }),
+  ]);
+
+  return { totalClients, activeClients, newClientsToday: newToday, newClientsMonth: newMonth, activeEmployees };
+}
+
+// ─── 8. Follow-Up Counts ──────────────────────────────────────────────────────
+
+async function buildFollowUpCounts(): Promise<FollowUpCounts> {
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+  const weekEnd    = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const base = { status: { $in: ACTIVE_LEAD_STATUSES }, followUpDate: { $exists: true, $ne: null } };
+
+  const [overdue, today, upcoming] = await Promise.all([
+    Lead.countDocuments({ ...base, followUpDate: { $lt: todayStart } }),
+    Lead.countDocuments({ ...base, followUpDate: { $gte: todayStart, $lte: todayEnd } }),
+    Lead.countDocuments({ ...base, followUpDate: { $gt: todayEnd, $lte: weekEnd } }),
+  ]);
+
+  return { overdue, today, upcoming, total: overdue + today + upcoming };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function clampLimit(raw?: number): number {
@@ -743,7 +783,7 @@ export async function buildAdminDashboard(
   const { period, dateRange } = parsePeriod(query);
   const limit = clampLimit(query.limit);
 
-  const [revenue, overdueProjects, pendingApprovals, leads, workload, recentActivity] =
+  const [revenue, overdueProjects, pendingApprovals, leads, workload, recentActivity, clientStats, followUpCounts] =
     await Promise.all([
       buildRevenueSummary(dateRange),
       buildOverdueProjectsSummary(limit),
@@ -751,6 +791,8 @@ export async function buildAdminDashboard(
       buildLeadMetricsSummary(dateRange),
       buildWorkloadSummary(),
       buildRecentActivity(limit),
+      buildClientStatsSummary(),
+      buildFollowUpCounts(),
     ]);
 
   return {
@@ -763,6 +805,8 @@ export async function buildAdminDashboard(
     leads,
     workload,
     recentActivity,
+    clientStats,
+    followUpCounts,
   };
 }
 

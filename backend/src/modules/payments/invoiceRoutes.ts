@@ -95,7 +95,7 @@ invoiceRouter.get(
         scopedClientId
       );
 
-      sendSuccess(res, result.invoices, { meta: result.meta });
+      sendSuccess(res, { invoices: result.invoices, total: result.meta.total }, { meta: result.meta });
     } catch (err) {
       next(err);
     }

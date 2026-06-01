@@ -12,7 +12,8 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
-  error?: string;
+  /** Backend may return error as a string or as a structured object */
+  error?: string | { code?: string; message?: string; stack?: string; details?: unknown };
   code?: string;
 }
 
@@ -91,7 +92,7 @@ async function attemptTokenRefresh(): Promise<string> {
     const refreshToken = getStoredRefreshToken();
     if (!refreshToken) throw new Error("No refresh token");
 
-    const url   = `${BASE_URL}/api/v1/auth/refresh`;
+    const url   = `${BASE_URL}/auth/refresh`;
     const res   = await fetch(url, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,7 +123,7 @@ async function request<T>(
   headers?:  Record<string, string>,
   _isRetry = false,
 ): Promise<T> {
-  const url = `${BASE_URL}/api/v1${path}`;
+  const url = `${BASE_URL}${path}`;
 
   const init: RequestInit = {
     method,
@@ -162,10 +163,27 @@ async function request<T>(
   }
 
   if (!res.ok || (json && !json.success)) {
+    // Backend returns { success: false, error: { code, message, stack } }
+    // Safely extract a string message regardless of shape
+    const rawError = json?.error;
+    const errorMessage: string =
+      json?.message ??
+      (rawError && typeof rawError === "object" && "message" in (rawError as object)
+        ? (rawError as { message?: string }).message
+        : undefined) ??
+      (typeof rawError === "string" ? rawError : undefined) ??
+      "An unexpected error occurred.";
+
+    const errorCode: string | undefined =
+      json?.code ??
+      (rawError && typeof rawError === "object" && "code" in (rawError as object)
+        ? (rawError as { code?: string }).code
+        : undefined);
+
     const err: ApiError = {
       status:  res.status,
-      message: json?.message ?? json?.error ?? "An unexpected error occurred.",
-      code:    json?.code,
+      message: errorMessage,
+      code:    errorCode,
     };
     if (DEBUG) console.error("[KlawTax API] Error:", err);
     throw err;
@@ -260,7 +278,7 @@ export async function submitLead(payload: LeadPayload): Promise<LeadSubmitRespon
   if (noteParts.length > 0)       body.notes = noteParts.join("\n");
   if (payload.serviceSlug)        body.serviceInterestSlugs = [payload.serviceSlug];
 
-  return post<LeadSubmitResponse>("/contact", body);
+  return post<LeadSubmitResponse>("/leads", body);
 }
 
 // ── Public — Services ────────────────────────────────────────
@@ -465,9 +483,51 @@ export function isAuthError(err: unknown): boolean {
   );
 }
 
+// ── Authenticated blob/XLSX download ─────────────────────────────────────────
+
+/**
+ * Download an authenticated binary endpoint as a file.
+ * Extracts the filename from the Content-Disposition header if present.
+ */
+export async function downloadBlob(
+  path: string,
+  fallbackFilename = "export.xlsx"
+): Promise<void> {
+  const url   = `${BASE_URL}${path}`;
+  const token = getStoredToken();
+
+  const res = await fetch(url, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const msg = await res.text().catch(() => "Export failed");
+    throw new Error(msg || `Export failed (${res.status})`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match       = disposition.match(/filename="?([^";\n]+)"?/);
+  const filename    = match?.[1] ?? fallbackFilename;
+
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor    = document.createElement("a");
+  anchor.href     = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  // Slight delay before revoke to ensure download triggers in all browsers
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 export default {
   get, post, patch, del,
   submitLead, fetchServices,
   createPaymentOrder, verifyPayment,
   fetchClientDashboard, fetchAdminDashboard,
+  downloadBlob,
 };
+

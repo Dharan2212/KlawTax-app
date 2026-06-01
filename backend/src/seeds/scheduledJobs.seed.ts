@@ -1,8 +1,11 @@
 /**
  * Scheduled Jobs Registry Seed
  *
- * Seeds all 10 canonical scheduledJobs entries per v1.5 Part 6.1.9.
- * Uses upsert — safe to re-run.
+ * Seeds all canonical scheduledJobs entries per v1.5 Part 6.1.9.
+ * Uses updateOne with $set only — safe to re-run idempotently.
+ *
+ * Fix (v7.4.1): Removed $setOnInsert to eliminate MongoDB path-conflict error
+ * that occurred when Mongoose timestamps + $setOnInsert both tried to write createdAt.
  */
 
 import { ScheduledJob } from '../models/scheduledJob';
@@ -76,32 +79,40 @@ const SCHEDULED_JOBS: JobSeedEntry[] = [
     cronExpression: '*/15 * * * *',
     isEnabled:      true,
   },
+  {
+    jobName:        'activity-session-cleanup',
+    description:    'Weekly Sunday — hard-delete inactive sessions older than 30 days',
+    cronExpression: '0 6 * * 0',
+    isEnabled:      true,
+  },
+  {
+    jobName:        'support-escalation-checker',
+    description:    'Every 6 hours — escalate tickets breaching SLA tier-1/tier-2 thresholds',
+    cronExpression: '0 */6 * * *',
+    isEnabled:      true,
+  },
 ];
 
 export async function runScheduledJobsSeed(): Promise<void> {
   let upserted = 0;
   let errors   = 0;
 
-  const now = new Date();
-
   for (const job of SCHEDULED_JOBS) {
     try {
-      await ScheduledJob.findOneAndUpdate(
+      await ScheduledJob.updateOne(
         { jobName: job.jobName },
         {
-          $setOnInsert: {
-            totalRunCount:    0,
-            totalFailureCount: 0,
-            createdAt:        now,
-          },
           $set: {
             description:    job.description,
             cronExpression: job.cronExpression,
             isEnabled:      job.isEnabled,
-            updatedAt:      now,
+          },
+          $setOnInsert: {
+            totalRunCount:     0,
+            totalFailureCount: 0,
           },
         },
-        { upsert: true, new: true }
+        { upsert: true }
       );
       upserted++;
     } catch (err) {

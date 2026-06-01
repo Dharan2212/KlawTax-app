@@ -121,7 +121,7 @@ export default function ContactPage() {
         schema={contactPageSchema}
       />
       <Navbar />
-      <main role="main" className="flex-1 pt-20">
+      <main id="main-content" role="main" className="flex-1 pt-20">
 
         {/* ── Hero ── */}
         <section className="py-16 md:py-20" style={{ background: "linear-gradient(135deg, #0F1B4C 0%, #1A2D6B 45%, #2E1065 100%)" }}>

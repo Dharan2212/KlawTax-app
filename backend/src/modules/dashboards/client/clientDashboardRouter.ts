@@ -39,6 +39,8 @@ import {
   getClientSupportSummary,
   getClientNotifications,
 } from './clientDashboardService';
+import { cache } from '../../../utils/cache';
+import { EXTENDED_CACHE_TTL, extendedCacheKey } from '../../../utils/cache/index';
 
 export const clientDashboardRouter = Router();
 
@@ -79,7 +81,22 @@ clientDashboardRouter.get(
     try {
       const clientProfileId = resolveClientProfileId(req);
       const limit           = parsePreviewLimit(req.query);
-      const data            = await getClientDashboard(clientProfileId, limit);
+
+      // Cache the full portal snapshot, keyed by clientProfileId + preview limit.
+      // The clientProfileId scope guarantees no cross-client data leakage.
+      //
+      // Paginated sub-endpoints (projects, payments, timeline, documents) are
+      // intentionally NOT cached: their query params (page, status, date filters)
+      // create high key cardinality and the data changes frequently during
+      // active project processing.
+      const key = `${extendedCacheKey.clientDashboard(clientProfileId)}:${limit}`;
+
+      const data = await cache.getOrSet(
+        key,
+        () => getClientDashboard(clientProfileId, limit),
+        EXTENDED_CACHE_TTL.CLIENT_DASHBOARD
+      );
+
       sendSuccess(res, data, { message: 'Client dashboard loaded' });
     } catch (err) {
       next(err);

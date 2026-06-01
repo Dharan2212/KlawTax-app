@@ -9,6 +9,7 @@ import { pricingPageSchema } from "@/lib/seo";
 import StickyMobileBar from "@/components/shared/StickyMobileBar";
 import { pageTransition, staggerContainer, staggerItem } from "@/lib/motion";
 import { allPriceItems, pricingPlans, featuredPackage } from "@/lib/pricing";
+import { COMPLETE_PACKAGE } from "@/lib/services";
 
 const WA = "https://wa.me/917387731313?text=" + encodeURIComponent("Hi KlawTax! I'd like to know about pricing.");
 const CATS = ["All", "NGO", "Compliance", "Business", "Reports", "Digital"] as const;
@@ -22,13 +23,13 @@ export default function PricingPage() {
     <motion.div {...pageTransition} className="min-h-screen flex flex-col">
       <SEO
         title="Service Pricing | KlawTax Legal & NGO Services"
-        description="Flat-fee pricing for all NGO, legal, and compliance services. Section 8 complete NGO package ₹13,500. 12A & 80G from ₹1,500. No hidden charges. All government fees included."
+        description={`Flat-fee pricing for all NGO, legal, and compliance services. Section 8 complete NGO package ₹${COMPLETE_PACKAGE.price.toLocaleString("en-IN")}. 12A & 80G from ₹1,500. No hidden charges. All government fees included.`}
         keywords="NGO registration price India, Section 8 company cost, 12A registration fee, 80G registration fee, GST registration price, legal services fee India, KlawTax pricing"
         canonical="/pricing"
         schema={pricingPageSchema}
       />
       <Navbar />
-      <main role="main" className="flex-1 pt-20">
+      <main id="main-content" role="main" className="flex-1 pt-20">
 
         {/* Hero */}
         <section className="py-16 md:py-20" style={{ background: "linear-gradient(135deg, #0F1B4C 0%, #1A2D6B 45%, #2E1065 100%)" }}>
@@ -83,7 +84,7 @@ export default function PricingPage() {
                       Get This Package <ArrowRight size={14} strokeWidth={2.5} />
                     </Link>
                     <Link to="/checkout?service=section8-complete&advance=true" className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all" style={{ border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.60)", textDecoration: "none", fontFamily: "'DM Sans', sans-serif" }}>
-                      Pay ₹6,750 Advance Only
+                      Pay ₹{COMPLETE_PACKAGE.advancePrice.toLocaleString("en-IN")} Advance Only
                     </Link>
                   </div>
                 </div>
@@ -104,7 +105,7 @@ export default function PricingPage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid #E2E8F0" }}>
+            <div className="overflow-x-auto -mx-0 rounded-2xl table-responsive" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full">
                 <thead>
                   <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
@@ -147,7 +148,7 @@ export default function PricingPage() {
             <h2 style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: "1.5rem", color: "#0F1B4C" }} className="mb-8 text-center">
               Section 8 Standalone vs. Complete Package
             </h2>
-            <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid #E2E8F0" }}>
+            <div className="overflow-x-auto -mx-0 rounded-2xl table-responsive" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full">
                 <thead>
                   <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
@@ -176,14 +177,14 @@ export default function PricingPage() {
                   <tr style={{ background: "#F8FAFC" }}>
                     <td className="px-6 py-4" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, color: "#0F1B4C" }}>PRICE</td>
                     <td className="text-center px-6 py-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "#0F1B4C", fontSize: "1.125rem" }}>₹7,999</td>
-                    <td className="text-center px-6 py-4" style={{ background: "rgba(245,158,11,0.06)" }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "#D97706", fontSize: "1.25rem" }}>₹13,500</span></td>
+                    <td className="text-center px-6 py-4" style={{ background: "rgba(245,158,11,0.06)" }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "#D97706", fontSize: "1.25rem" }}>₹{COMPLETE_PACKAGE.price.toLocaleString("en-IN")}</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div className="mt-6 text-center">
               <Link to="/checkout?service=section8-complete" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-base transition-all hover:-translate-y-0.5" style={{ background: "linear-gradient(90deg, #D97706, #F59E0B)", color: "#0F172A", textDecoration: "none", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 8px 32px rgba(217,119,6,0.30)" }}>
-                Get Complete Package — ₹13,500 <ArrowRight size={16} strokeWidth={2.5} />
+                Get Complete Package — ₹{COMPLETE_PACKAGE.price.toLocaleString("en-IN")} <ArrowRight size={16} strokeWidth={2.5} />
               </Link>
             </div>
           </div>

@@ -231,7 +231,7 @@ export default function CheckoutPage() {
         <SEO title="Payment Successful | KlawTax" noindex={true} />
         <Navbar />
         <main
-          role="main"
+          id="main-content" role="main"
           className="pt-28 pb-16 flex-1 flex items-center justify-center px-4"
         >
           <motion.div
@@ -329,7 +329,7 @@ export default function CheckoutPage() {
         noindex={true}
       />
       <Navbar />
-      <main role="main" className="pt-28 pb-24 flex-1">
+      <main id="main-content" role="main" className="pt-28 pb-24 flex-1">
         <div className="container mx-auto px-4 max-w-6xl">
 
           {/* Step indicator */}
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
                     animate="visible"
                     exit="exit"
                   >
-                    <div className="premium-card p-8">
+                    <div className="premium-card p-5 sm:p-8">
                       <h2 className="section-heading text-foreground mb-1">
                         Your Details
                       </h2>
@@ -547,7 +547,7 @@ export default function CheckoutPage() {
                     animate="visible"
                     exit="exit"
                   >
-                    <div className="premium-card p-8">
+                    <div className="premium-card p-5 sm:p-8">
                       <h2 className="section-heading text-foreground mb-1">
                         Choose Payment Option
                       </h2>
@@ -771,7 +771,7 @@ export default function CheckoutPage() {
             {/* Order Summary sidebar */}
             <div className="lg:w-[380px] flex-shrink-0">
               <div className="lg:sticky lg:top-28 space-y-4">
-                <div className="premium-card p-7 shadow-xl">
+                <div className="premium-card p-5 sm:p-7 shadow-xl">
                   <h3 className="font-heading font-bold text-lg text-foreground mb-5">
                     Order Summary
                   </h3>

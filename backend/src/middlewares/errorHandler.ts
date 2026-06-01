@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { config } from '../config/env';
+import { captureError } from '../utils/telemetry/telemetry';
 
 // ─── AppError Class ───────────────────────────────────────────────────────────
 
@@ -192,6 +193,13 @@ export function errorHandler(
     method: req.method,
     requestId,
     stack: unknownStack,
+  });
+
+  // Capture unexpected errors in telemetry
+  captureError(err, {
+    requestId,
+    route: req.path,
+    method: req.method,
   });
 
   const response: ErrorResponse = {
